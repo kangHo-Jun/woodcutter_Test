@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대산 Ai - 재단 최적화</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/responsive-style.css">
+
+    <!-- jsPDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>대산 Ai</h1>
+        <div class="header-buttons">
+            <button class="btn btn-secondary" id="saveBtn" title="저장하기">
+                <span class="btn-text">저장하기</span>
+            </button>
+            <button class="btn btn-primary" id="newBtn" title="새 프로젝트">
+                <span class="btn-text">새 프로젝트</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav">
+        <div class="mobile-nav-tabs">
+            <button class="mobile-nav-tab active" data-panel="left">입력</button>
+            <button class="mobile-nav-tab" data-panel="center">도면</button>
+            <button class="mobile-nav-tab" data-panel="right">결과</button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Left Panel: Input -->
+        <aside class="left-panel active" id="leftPanel">
+            <!-- Board Info -->
+            <section class="section">
+                <h2 class="section-title">판재 정보</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="boardWidth">폭 (mm)</label>
+                        <input type="number" id="boardWidth" value="1220" min="100" max="5000">
+                    </div>
+                    <div class="form-group">
+                        <label for="boardHeight">길이 (mm)</label>
+                        <input type="number" id="boardHeight" value="2440" min="100" max="5000">
+                    </div>
+                    <div class="form-group">
+                        <label for="boardThickness">두께 (mm)</label>
+                        <input type="number" id="boardThickness" value="18" min="1" max="100">
+                    </div>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="considerGrain">
+                    <label for="considerGrain">나무결 방향 고려 (집성판, 자작합판 등)</label>
+                </div>
+                <!-- 트리밍 옵션 -->
+                <div class="form-row trim-row">
+                    <div class="checkbox-group trim-checkbox">
+                        <input type="checkbox" id="enableTrim" checked>
+                        <label for="enableTrim">전단여부</label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Parts Input -->
+            <section class="section">
+                <h2 class="section-title">부품 목록</h2>
+
+                <!-- Quick Add Form -->
+                <div class="form-row mb-3">
+                    <div class="form-group mb-0">
+                        <label for="partWidth">치수1</label>
+                        <input type="number" id="partWidth" placeholder="mm" min="10" step="0.1">
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="partHeight">치수2</label>
+                        <input type="number" id="partHeight" placeholder="mm" min="10" step="0.1">
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="partQty">수량</label>
+                        <input type="number" id="partQty" value="1" min="1" max="999">
+                    </div>
+                </div>
+
+                <div class="form-row mb-3 part-actions-row">
+                    <div class="checkbox-group part-rotate-check">
+                        <input type="checkbox" id="partRotatable" checked>
+                        <label for="partRotatable">회전 가능</label>
+                    </div>
+                    <button class="btn btn-primary part-add-btn" id="addPartBtn">
+                        부품 추가
+                    </button>
+                </div>
+
+                <!-- Parts Table -->
+                <div class="parts-table-container">
+                    <table class="parts-table">
+                        <thead>
+                            <tr>
+                                <th>치수</th>
+                                <th>수량</th>
+                                <th>회전</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="partsTableBody">
+                            <tr class="empty-row">
+                                <td colspan="4">부품을 추가하세요</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-row mt-3">
+                    <button class="btn btn-danger btn-sm btn-full" id="clearPartsBtn">
+                        전체 삭제
+                    </button>
+                </div>
+            </section>
+
+            <!-- Calculate Button -->
+            <button class="calculate-btn" id="calculateBtn">
+                최적화 계산
+            </button>
+        </aside>
+
+        <!-- Center Panel: Preview -->
+        <main class="center-panel" id="centerPanel">
+            <!-- Controls -->
+            <div class="canvas-controls-top" id="canvasControlsTop" style="display: none;">
+                <button class="btn btn-secondary" id="previewPdfBtn">미리보기</button>
+                <button class="btn btn-primary" id="downloadPdfBtn">PDF 다운로드</button>
+                <div class="share-dropdown">
+                </div>
+            </div>
+
+            <!-- Scrollable Canvas List -->
+            <div class="canvas-scroll-container" id="canvasScrollContainer"
+                style="display: none;">
+                <!-- 그룹별 대표 도면이 여기에 동적으로 생성됨 -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state">
+                <div class="empty-state-illustration">
+                    <svg width="140" height="116" viewBox="0 0 140 116" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <!-- Board outline -->
+                        <rect x="6" y="6" width="128" height="104" rx="6" stroke="#48BB78" stroke-width="2.5"/>
+                        <!-- Parts -->
+                        <rect x="14" y="14" width="42" height="28" rx="3" fill="#48BB78" fill-opacity="0.18"/>
+                        <rect x="64" y="14" width="62" height="28" rx="3" fill="#48BB78" fill-opacity="0.28"/>
+                        <rect x="14" y="50" width="72" height="26" rx="3" fill="#48BB78" fill-opacity="0.22"/>
+                        <rect x="94" y="50" width="32" height="26" rx="3" fill="#48BB78" fill-opacity="0.32"/>
+                        <rect x="14" y="84" width="52" height="22" rx="3" fill="#48BB78" fill-opacity="0.18"/>
+                        <rect x="74" y="84" width="52" height="22" rx="3" fill="#48BB78" fill-opacity="0.24"/>
+                        <!-- Horizontal cut lines -->
+                        <line x1="6" y1="50" x2="134" y2="50" stroke="#48BB78" stroke-width="1.5" stroke-dasharray="5 3.5" stroke-opacity="0.55"/>
+                        <line x1="6" y1="84" x2="134" y2="84" stroke="#48BB78" stroke-width="1.5" stroke-dasharray="5 3.5" stroke-opacity="0.55"/>
+                        <!-- Vertical cut lines -->
+                        <line x1="64" y1="6" x2="64" y2="50" stroke="#48BB78" stroke-width="1.5" stroke-dasharray="5 3.5" stroke-opacity="0.55"/>
+                        <line x1="94" y1="50" x2="94" y2="84" stroke="#48BB78" stroke-width="1.5" stroke-dasharray="5 3.5" stroke-opacity="0.55"/>
+                        <line x1="74" y1="84" x2="74" y2="110" stroke="#48BB78" stroke-width="1.5" stroke-dasharray="5 3.5" stroke-opacity="0.55"/>
+                    </svg>
+                </div>
+                <p class="empty-state-title">재단 도면이 여기에 표시됩니다</p>
+                <p class="empty-state-text">부품을 추가하고 최적화 계산을 실행하세요</p>
+            </div>
+        </main>
+
+        <!-- Right Panel: Results -->
+        <aside class="right-panel" id="rightPanel">
+            <!-- Optimization Results -->
+            <section class="section">
+                <h2 class="section-title">최적화 결과</h2>
+                <div class="result-card">
+                    <div class="result-item">
+                        <span class="result-label">총 판재수</span>
+                        <span class="result-value" id="totalPanelCount">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">재단 횟수</span>
+                        <span class="result-value" id="totalCutCount">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">총 재단비</span>
+                        <span class="result-value" id="totalCuttingCost">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Parts Summary -->
+            <section class="section">
+                <h2 class="section-title">부품 배치 현황</h2>
+                <div id="labelGroupsList">
+                    <p class="empty-state-text text-center empty-state-padded">
+                        계산을 실행하면 결과가 표시됩니다
+                    </p>
+                </div>
+            </section>
+
+            <!-- Board Navigation (for multiple boards) -->
+            <section class="section hidden" id="boardNavSection">
+                <h2 class="section-title">판재 선택</h2>
+                <div id="boardNavList"></div>
+            </section>
+
+        </aside>
+    </div>
+
+    <!-- Scripts: Core Modules -->
+    <script src="js/state.js"></script>
+    <script src="js/validator.js"></script>
+    <script src="js/costCalculator.js"></script>
+    <script src="js/labelingEngine.js"></script>
+    <script src="js/settingsManager.js"></script>
+    <script src="js/packer.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/pdfGenerator.js"></script>
+
+    <!-- Main Application Script -->
+    <script src="js/main-unified.js"></script>
+
+    <!-- UI Layer: Quick Win Enhancements -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const partWidth = document.getElementById('partWidth');
+            const addPartBtn = document.getElementById('addPartBtn');
+            const clearPartsBtn = document.getElementById('clearPartsBtn');
+            const partList = document.getElementById('partListBody');
+
+            // 1. Initial Focus
+            if (partWidth) setTimeout(() => partWidth.focus(), 500);
+
+            // 2. Clear All Button State Management
+            const updateClearBtnState = () => {
+                if (!clearPartsBtn || !partList) return;
+                const hasParts = partList.querySelectorAll('tr:not(.empty-row)').length > 0;
+                clearPartsBtn.disabled = !hasParts;
+                clearPartsBtn.style.opacity = hasParts ? '1' : '0.5';
+            };
+
+            // Watch for changes in the parts table
+            const observer = new MutationObserver(updateClearBtnState);
+            if (partList) observer.observe(partList, { childList: true });
+            
+            // Initial check
+            updateClearBtnState();
+
+            // 3. Ensuring focus remains on partWidth after Add/Clear actions
+            [addPartBtn, clearPartsBtn].forEach(btn => {
+                if (btn) btn.addEventListener('click', () => {
+                    setTimeout(() => { if (partWidth) partWidth.focus(); }, 100);
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
