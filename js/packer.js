@@ -826,6 +826,43 @@ class AdaptiveGuillotineBin {
             return { placed: [], unplaced: [...items], freeRects: [rect], cutDetails: [] };
         }
 
+        // 나머지 부품이 스트립에 못 들어가면 가로 배치 전환
+        if (fittable.length === 1 && fittable[0].rotatable) {
+            const item = fittable[0];
+            // 가로(길이) 배치: 긴 치수를 width(길이방향)으로
+            const longDim = Math.max(item.width, item.height);
+            const shortDim = Math.min(item.width, item.height);
+            if (longDim <= rect.width && shortDim <= rect.height) {
+                const rotated = item.height > item.width;
+                const placed = [{
+                    ...item,
+                    x: rect.x,
+                    y: rect.y,
+                    width: longDim,
+                    height: shortDim,
+                    rotated
+                }];
+                const remaining = items.filter(i => i.id !== item.id);
+                const freeRects = [];
+                const rightX = rect.x + longDim + this.kerf;
+                const rightW = rect.width - longDim - this.kerf;
+                if (rightW > 0) {
+                    freeRects.push({ x: rightX, y: rect.y, width: rightW, height: shortDim });
+                }
+                const bottomY = rect.y + shortDim + this.kerf;
+                const bottomH = rect.height - shortDim - this.kerf;
+                if (bottomH > 0) {
+                    freeRects.push({ x: rect.x, y: bottomY, width: rect.width, height: bottomH });
+                }
+                return {
+                    placed,
+                    unplaced: remaining,
+                    freeRects: this.normalizeFreeRects(freeRects),
+                    cutDetails: []
+                };
+            }
+        }
+
         // 4. 부품 배치 (면적 큰 순, 좌→우)
         const stripItems = fittable
             .filter(item =>
