@@ -847,7 +847,7 @@ class WoodcutterApp {
             if (showH) {
                 const text = `${part.height}`;
                 ctx.save();
-                ctx.translate(x + 3, y + h / 2);
+                ctx.translate(x + 10, y + h / 2);
                 ctx.rotate(-Math.PI / 2);
                 ctx.font = `${FONT_NORMAL}px "Noto Sans KR", sans-serif`;
                 const textW = ctx.measureText(text).width;
@@ -868,15 +868,23 @@ class WoodcutterApp {
                 ctx.restore();
             }
 
-            // 라벨 (부품 중앙)
-            ctx.fillStyle = '#333333';
-            ctx.font = 'bold 14px "Noto Sans KR", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            // 라벨이 부품 안에 들어갈 때만 표시
-            if (w > 20 && h > 20) {
-                ctx.fillText(label, x + w / 2, y + h / 2);
+            // 라벨을 부품 우측 상단에 표시
+            const LABEL_NORMAL = 11;
+            const LABEL_SMALL = 7;
+
+            // 라벨 폰트 크기 결정 (부품 안에 들어가는 크기)
+            let labelSize = LABEL_NORMAL;
+            ctx.font = `bold ${LABEL_NORMAL}px "Noto Sans KR", sans-serif`;
+            const labelW = ctx.measureText(label).width;
+            if (labelW > w - 4 || LABEL_NORMAL > h - 2) {
+                labelSize = LABEL_SMALL;
             }
+
+            ctx.font = `bold ${labelSize}px "Noto Sans KR", sans-serif`;
+            ctx.fillStyle = '#1A202C';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.fillText(label, x + w - 3, y + 3);
         });
 
         // === 부품 위 워터마크 추가 (설정 연동) ===
