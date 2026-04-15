@@ -537,7 +537,7 @@ class WoodcutterApp {
             const boardW = trimEnabled ? effectiveBoardWidth : this.state.boardSpec.width;
             const boardH = trimEnabled ? effectiveBoardHeight : this.state.boardSpec.height;
             // 판재의 긴 축/짧은 축 판단
-            const boardLongIsX = boardW >= boardH;
+            const boardLongIsX = true; // packerW가 항상 긴 축(길이방향)
             const boardLong  = Math.max(boardW, boardH);
             const boardShort = Math.min(boardW, boardH);
 
@@ -807,27 +807,75 @@ class WoodcutterApp {
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
 
-            // 부품 테두리
-            ctx.strokeStyle = '#cccccc';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+            // 절단선 (부품 테두리 = 절단선)
+            ctx.strokeStyle = '#2D3748';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x, y, w, h);
 
-            // 라벨 찾기
+            // 라벨
             const label = LabelingEngine.findLabel(part.width, part.height, labeledGroups);
+            const FONT_NORMAL = 11;
+            const FONT_SMALL = 7;
 
-            // 라벨 텍스트
+            // 치수 표시 조건: 실제 크기 50mm 이상
+            const showW = part.width >= 50;
+            const showH = part.height >= 50;
+
+            // 가로 치수 (상단 중앙)
+            if (showW) {
+                const text = `${part.width}`;
+                // NORMAL 크기로 들어가는지 확인
+                ctx.font = `${FONT_NORMAL}px "Noto Sans KR", sans-serif`;
+                const textW = ctx.measureText(text).width;
+                let fontSize = FONT_NORMAL;
+                if (textW > w - 4) {
+                    fontSize = FONT_SMALL;
+                    ctx.font = `${FONT_SMALL}px "Noto Sans KR", sans-serif`;
+                    const smallW = ctx.measureText(text).width;
+                    if (smallW > w - 2) fontSize = 0; // 생략
+                }
+                if (fontSize > 0) {
+                    ctx.font = `${fontSize}px "Noto Sans KR", sans-serif`;
+                    ctx.fillStyle = '#2B6CB0';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(text, x + w / 2, y + 3);
+                }
+            }
+
+            // 세로 치수 (좌측 중앙, 90도 회전)
+            if (showH) {
+                const text = `${part.height}`;
+                ctx.save();
+                ctx.translate(x + 3, y + h / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.font = `${FONT_NORMAL}px "Noto Sans KR", sans-serif`;
+                const textW = ctx.measureText(text).width;
+                let fontSize = FONT_NORMAL;
+                if (textW > h - 4) {
+                    fontSize = FONT_SMALL;
+                    ctx.font = `${FONT_SMALL}px "Noto Sans KR", sans-serif`;
+                    const smallW = ctx.measureText(text).width;
+                    if (smallW > h - 2) fontSize = 0;
+                }
+                if (fontSize > 0) {
+                    ctx.font = `${fontSize}px "Noto Sans KR", sans-serif`;
+                    ctx.fillStyle = '#2B6CB0';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, 0, 0);
+                }
+                ctx.restore();
+            }
+
+            // 라벨 (부품 중앙)
             ctx.fillStyle = '#333333';
-            ctx.font = 'bold 16px "Noto Sans KR", sans-serif';
+            ctx.font = 'bold 14px "Noto Sans KR", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(label, x + w / 2, y + h / 2);
-
-            // 치수 표시: 같은 라벨의 첫 번째 부품에만 (겹쳐도 무관)
-            const isFirstForLabel = labelFirstPart[label] === index;
-            if (isFirstForLabel) {
-                ctx.font = '12px "Noto Sans KR", sans-serif';
-                ctx.fillStyle = '#666666';
-                ctx.fillText(`${part.width}×${part.height}`, x + w / 2, y + h / 2 + 18);
+            // 라벨이 부품 안에 들어갈 때만 표시
+            if (w > 20 && h > 20) {
+                ctx.fillText(label, x + w / 2, y + h / 2);
             }
         });
 

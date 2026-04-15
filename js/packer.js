@@ -106,9 +106,24 @@ class GuillotinePacker {
 
         // 판재수 비교 → 적은 쪽 선택
         // 같으면 B 선택
-        const selectedBins = (binsA.length < binsB.length) ? binsA : binsB;
-        const selectedUnplaced = (binsA.length < binsB.length) ? remainingA : remainingB;
-        const selectedEngine = (binsA.length < binsB.length) ? 'A' : 'B';
+        let selectedBins, selectedUnplaced, selectedEngine;
+        if (binsB.length === 0) {
+            selectedBins = binsA;
+            selectedUnplaced = remainingA;
+            selectedEngine = 'A';
+        } else if (binsA.length === 0) {
+            selectedBins = binsB;
+            selectedUnplaced = remainingB;
+            selectedEngine = 'B';
+        } else if (binsA.length < binsB.length) {
+            selectedBins = binsA;
+            selectedUnplaced = remainingA;
+            selectedEngine = 'A';
+        } else {
+            selectedBins = binsB;
+            selectedUnplaced = remainingB;
+            selectedEngine = 'B';
+        }
         console.log(`[ALGO] A판재:${binsA.length} B판재:${binsB.length} 선택:${selectedEngine}`);
 
         return {
@@ -771,8 +786,16 @@ class AdaptiveGuillotineBin {
         // 2. 높이 후보 수집
         const heightCandidates = new Set();
         fittable.forEach(item => {
+            // 원래 방향
             if (item.height <= rect.height && item.width <= rect.width) {
                 heightCandidates.add(item.height);
+            }
+            // 회전 방향 (회전 시 height가 더 작아지는 경우만)
+            if (item.rotatable &&
+                item.width < item.height &&
+                item.width <= rect.height &&
+                item.height <= rect.width) {
+                heightCandidates.add(item.width);
             }
         });
 
