@@ -65,11 +65,24 @@
                     <input type="checkbox" id="considerGrain">
                     <label for="considerGrain">나무결 방향 고려 (집성판, 자작합판 등)</label>
                 </div>
-                <!-- 트리밍 옵션 -->
-                <div class="form-row trim-row">
-                    <div class="checkbox-group trim-checkbox">
+                <!-- 트리밍 옵션 및 톱날 두께 -->
+                <div style="border-top: 1px solid #e0e0e0; margin-top: 12px; padding-top: 12px;">
+                    <!-- 전단여부 라인 -->
+                    <div class="checkbox-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <input type="checkbox" id="enableTrim" checked>
-                        <label for="enableTrim">전단여부</label>
+                        <label for="enableTrim" style="margin: 0; flex-shrink: 0; min-width: 80px;">전단여부</label>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="number" id="trimMargin" value="5" min="0" max="50" step="0.1" placeholder="치수" style="width: 70px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                            <span style="color: #666; font-size: 13px; flex-shrink: 0;">mm</span>
+                        </div>
+                    </div>
+                    <!-- 톱날 두께 라인 (들여쓰기) -->
+                    <div style="display: flex; align-items: center; gap: 8px; margin-left: 24px;">
+                        <label for="kerfInput" style="color: #666; font-size: 13px; flex-shrink: 0; min-width: 80px;">톱날두께</label>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="number" id="kerfInput" value="4.2" min="0" max="10" step="0.1" style="width: 70px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                            <span style="color: #666; font-size: 13px; flex-shrink: 0;">mm</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -127,6 +140,73 @@
                     <button class="btn btn-danger btn-sm btn-full" id="clearPartsBtn">
                         전체 삭제
                     </button>
+                </div>
+            </section>
+
+            <!-- Cost Info -->
+            <section class="section section-accordion">
+                <div class="accordion" id="costSettings">
+                    <div class="accordion-header">
+                        <span>원가 설정</span>
+                        <span class="accordion-icon">▼</span>
+                    </div>
+                    <div class="accordion-body">
+                        <!-- 절단 단가(컷당) -->
+                        <div class="form-group">
+                            <label for="cutPriceInput">절단 단가 (컷당, 원)</label>
+                            <input type="number" id="cutPriceInput" value="1500" min="0" max="100000" step="100">
+                        </div>
+
+                        <!-- 쭉절단 단가 테이블 -->
+                        <div style="margin-top: 20px;">
+                            <p style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">쭉절단 단가 (원/판)</p>
+                            
+                            <!-- 12T 이하 -->
+                            <div style="margin-bottom: 16px; padding: 10px; background-color: #f8f8f8; border-radius: 4px;">
+                                <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">12T 이하</p>
+                                <div class="form-row">
+                                    <div class="form-group mb-0">
+                                        <label for="longPrice_12T_100up">100mm↑</label>
+                                        <input type="number" id="longPrice_12T_100up" value="5000" min="0" max="999999" step="100">
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label for="longPrice_12T_100down">100mm미만</label>
+                                        <input type="number" id="longPrice_12T_100down" value="7000" min="0" max="999999" step="100">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 14.5~23T -->
+                            <div style="margin-bottom: 16px; padding: 10px; background-color: #f8f8f8; border-radius: 4px;">
+                                <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">14.5~23T</p>
+                                <div class="form-row">
+                                    <div class="form-group mb-0">
+                                        <label for="longPrice_23T_100up">100mm↑</label>
+                                        <input type="number" id="longPrice_23T_100up" value="7000" min="0" max="999999" step="100">
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label for="longPrice_23T_100down">100mm미만</label>
+                                        <input type="number" id="longPrice_23T_100down" value="10000" min="0" max="999999" step="100">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 24T↑ -->
+                            <div style="margin-bottom: 16px; padding: 10px; background-color: #f8f8f8; border-radius: 4px;">
+                                <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">24T↑</p>
+                                <div class="form-row">
+                                    <div class="form-group mb-0">
+                                        <label for="longPrice_24T_100up">100mm↑</label>
+                                        <input type="number" id="longPrice_24T_100up" value="12000" min="0" max="999999" step="100">
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label for="longPrice_24T_100down">100mm미만</label>
+                                        <input type="number" id="longPrice_24T_100down" value="15000" min="0" max="999999" step="100">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 

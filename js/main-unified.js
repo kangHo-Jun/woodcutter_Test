@@ -527,11 +527,11 @@ class WoodcutterApp {
                 throw new Error('전단 여백이 판재 크기보다 큽니다. 여백 값을 확인하세요.');
             }
 
-            const packer = new GuillotinePacker(
-                trimEnabled ? effectiveBoardWidth : this.state.boardSpec.width,
-                trimEnabled ? effectiveBoardHeight : this.state.boardSpec.height,
-                settings.kerf
-            );
+            const rawW = trimEnabled ? effectiveBoardWidth : this.state.boardSpec.width;
+            const rawH = trimEnabled ? effectiveBoardHeight : this.state.boardSpec.height;
+            const packerW = Math.max(rawW, rawH);
+            const packerH = Math.min(rawW, rawH);
+            const packer = new GuillotinePacker(packerW, packerH, settings.kerf);
 
             const considerGrain = this.state.boardSpec.considerGrain;
             const boardW = trimEnabled ? effectiveBoardWidth : this.state.boardSpec.width;
@@ -741,9 +741,9 @@ class WoodcutterApp {
         const trimMargin = trimEnabled ? (parseFloat(trimSettings.trimMargin) || 0) : 0;
         const boardWidth = this.state.boardSpec.width - trimMargin;
         const boardHeight = this.state.boardSpec.height;
-        const isPortraitBoard = this.state.boardSpec.width < this.state.boardSpec.height;
-        const renderBoardWidth = isPortraitBoard ? boardHeight : boardWidth;
-        const renderBoardHeight = isPortraitBoard ? boardWidth : boardHeight;
+        const isPortraitBoard = false;
+        const renderBoardWidth = Math.max(boardWidth, boardHeight);
+        const renderBoardHeight = Math.min(boardWidth, boardHeight);
         const maxWidth = 700;
         const padding = 50;
         const drawScale = (maxWidth - padding * 2) / renderBoardWidth;
@@ -790,10 +790,10 @@ class WoodcutterApp {
 
         const renderedPlaced = bin.placed.map(part => ({
             source: part,
-            x: isPortraitBoard ? part.y : part.x,
-            y: isPortraitBoard ? part.x : part.y,
-            width: isPortraitBoard ? part.height : part.width,
-            height: isPortraitBoard ? part.width : part.height
+            x: part.x,
+            y: part.y,
+            width: part.width,
+            height: part.height
         }));
 
         // 부품 그리기

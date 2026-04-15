@@ -76,45 +76,27 @@ class GuillotinePacker {
 
     packAdaptiveAuto(items) {
         const expandedItems = this.expandItems(items, false);
+        const bins = [];
+        let remainingItems = [...expandedItems];
 
-        // 알고리즘A 실행
-        const binsA = [];
-        let remainingA = [...expandedItems];
-        while (remainingA.length > 0) {
+        while (remainingItems.length > 0) {
             const bin = new AdaptiveGuillotineBin(this.binWidth, this.binHeight, this.kerf);
-            const result = bin.pack(remainingA);
+            const result = bin.pack(remainingItems);
+
             if (result.placed.length === 0) break;
-            if (result.unplaced.length > 0) {
+
+            if (this.isTrimEnabled() && result.unplaced.length > 0) {
                 this.tryPlaceResidualInAdaptive(result);
             }
-            binsA.push(result);
-            remainingA = result.unplaced;
-        }
 
-        // 알고리즘B 실행
-        const binsB = [];
-        let remainingB = [...expandedItems];
-        while (remainingB.length > 0) {
-            const binW = Math.max(this.binWidth, this.binHeight);
-            const binH = Math.min(this.binWidth, this.binHeight);
-            const bin = new AdaptiveGuillotineBinB(binW, binH, this.kerf);
-            const result = bin.pack(remainingB);
-            if (result.placed.length === 0) break;
-            binsB.push(result);
-            remainingB = result.unplaced;
+            bins.push(result);
+            remainingItems = result.unplaced;
         }
-
-        // 판재수 비교 → 적은 쪽 선택
-        // 같으면 B 선택
-        const selectedBins = (binsA.length < binsB.length) ? binsA : binsB;
-        const selectedUnplaced = (binsA.length < binsB.length) ? remainingA : remainingB;
-        const selectedEngine = (binsA.length < binsB.length) ? 'A' : 'B';
-        console.log(`[ALGO] A판재:${binsA.length} B판재:${binsB.length} 선택:${selectedEngine}`);
 
         return {
-            bins: selectedBins,
-            unplaced: selectedUnplaced,
-            totalEfficiency: this.calculateTotalEfficiency(selectedBins),
+            bins,
+            unplaced: remainingItems,
+            totalEfficiency: this.calculateTotalEfficiency(bins),
             mode: 'auto'
         };
     }
@@ -328,20 +310,6 @@ class GuillotinePacker {
         }
 
         let sourceFreeRects = Array.isArray(result.freeRects) ? result.freeRects : [];
-        // 하단 전폭 공간 강제 추가
-        if (result.placed && result.placed.length > 0) {
-            const maxY = Math.max(...result.placed.map(p => p.y + p.height));
-            const bottomY = maxY + this.kerf;
-            const bottomH = this.binHeight - bottomY;
-            if (bottomH > 0) {
-                sourceFreeRects.push({
-                    x: 0,
-                    y: bottomY,
-                    width: this.binWidth,
-                    height: bottomH
-                });
-            }
-        }
 
         // freeRects가 비어있으면 배치된 부품 기준으로 잔재 공간을 직접 계산
         if (sourceFreeRects.length === 0) {
@@ -356,12 +324,11 @@ class GuillotinePacker {
         const freeRects = [...sourceFreeRects]
             .filter(rect => rect.width > 0 && rect.height > 0)
             .sort((a, b) => (b.width * b.height) - (a.width * a.height));
-        let placedAny = false;
+
+        const candidates = [...result.unplaced]
+            .sort((a, b) => (b.width * b.height) - (a.width * a.height));
 
         for (const rect of freeRects) {
-            const candidates = [...result.unplaced]
-                .sort((a, b) => (b.width * b.height) - (a.width * a.height));
-
             for (const item of candidates) {
                 const orientations = [{ w: item.width, h: item.height, rotated: false }];
                 if (item.rotatable) {
@@ -383,14 +350,13 @@ class GuillotinePacker {
                         result.usedArea = result.placed.reduce((sum, p) => sum + p.width * p.height, 0);
                         result.efficiency = (result.usedArea / result.totalArea) * 100;
                         result.cuttingCount = this.recomputeAdaptiveCuttingCount(result.placed);
-                        placedAny = true;
-                        break;
+                        return true;
                     }
                 }
             }
         }
 
-        return placedAny;
+        return false;
     }
 
     recomputeAdaptiveCuttingCount(placed) {
@@ -585,58 +551,7 @@ class AdaptiveGuillotineBin {
 
         const placedArea = placed.reduce((sum, part) => sum + (part.width * part.height), 0);
         const score = this.computeEfficiencyScore(placedArea, freeRects);
-        return {
-            firstDirection,
-            placed,
-            unplaced: remaining,
-            freeRects,
-            placedArea,
-            score,
-            cutDetails
-        };
-    }
 
-    simulateFirstDirectionB(items, firstDirection) {
-        const rootRect = { x: 0, y: 0, width: this.width, height: this.height };
-        let result;
-        if (firstDirection === 'H') {
-            result = this.guillotineCutB(rootRect, items);
-        } else {
-            result = this.packVerticalPrimary(rootRect, items);
-        }
-        let placed = [...result.placed];
-        let remaining = result.unplaced;
-        let freeRects = [...result.freeRects];
-        let cutDetails = [...(result.cutDetails || [])];
-
-        // 하단 전폭 freeRect에 남은 부품 배치
-        while (remaining.length > 0 && freeRects.length > 0) {
-            let placedAny = false;
-            const nextFreeRects = [];
-            freeRects
-                .sort((a, b) => (b.width * b.height) - (a.width * a.height))
-                .forEach(rect => {
-                    if (!this.canFitAny(rect, remaining)) {
-                        nextFreeRects.push(rect);
-                        return;
-                    }
-                    const best = this.packRectFlexible(rect, remaining);
-                    if (best.placed.length === 0) {
-                        nextFreeRects.push(rect);
-                        return;
-                    }
-                    placedAny = true;
-                    placed.push(...best.placed);
-                    remaining = best.unplaced;
-                    nextFreeRects.push(...best.freeRects);
-                    cutDetails.push(...(best.cutDetails || []));
-                });
-            freeRects = this.normalizeFreeRects(nextFreeRects);
-            if (!placedAny) break;
-        }
-
-        const placedArea = placed.reduce((sum, p) => sum + p.width * p.height, 0);
-        const score = this.computeEfficiencyScore(placedArea, freeRects);
         return {
             firstDirection,
             placed,
@@ -649,9 +564,10 @@ class AdaptiveGuillotineBin {
     }
 
     pickBetterSimulation(a, b) {
-        // 무조건 H(가로) 우선
-        if (a.firstDirection === 'H') return a;
-        return b;
+        if (a.score !== b.score) return a.score > b.score ? a : b;
+        if (a.placedArea !== b.placedArea) return a.placedArea > b.placedArea ? a : b;
+        if (a.placed.length !== b.placed.length) return a.placed.length > b.placed.length ? a : b;
+        return a.unplaced.length <= b.unplaced.length ? a : b;
     }
 
     packRectFlexible(rect, items) {
@@ -700,13 +616,13 @@ class AdaptiveGuillotineBin {
                     continue;
                 }
 
-                // 하부 공간 최대화: usedArea 같으면 stripHeight 작은 것 우선
                 if (attempt.usedArea > bestAttempt.usedArea) {
                     bestAttempt = attempt;
                     continue;
                 }
+
                 if (attempt.usedArea === bestAttempt.usedArea &&
-                    attempt.stripSize < bestAttempt.stripSize) {
+                    attempt.placed.length > bestAttempt.placed.length) {
                     bestAttempt = attempt;
                 }
             }
@@ -716,16 +632,7 @@ class AdaptiveGuillotineBin {
             placed.push(...bestAttempt.placed);
             remaining = bestAttempt.unplaced;
             if (bestAttempt.rightFreeRect) {
-                const subResult = this.packRectFlexible(
-                    bestAttempt.rightFreeRect, remaining
-                );
-                placed.push(...subResult.placed);
-                remaining = subResult.unplaced;
-                freeRects.push(...subResult.freeRects);
-                cutDetails.push(...(subResult.cutDetails || []));
-            }
-            if (bestAttempt.bottomFreeRects) {
-                freeRects.push(...bestAttempt.bottomFreeRects);
+                freeRects.push(bestAttempt.rightFreeRect);
             }
             cutDetails.push(...(bestAttempt.cutDetails || []));
             currentY = stripStartY + bestAttempt.stripSize;
@@ -743,125 +650,6 @@ class AdaptiveGuillotineBin {
                 width: rect.width,
                 height: bottomHeight
             });
-        }
-        return {
-            placed,
-            unplaced: remaining,
-            freeRects: this.normalizeFreeRects(freeRects),
-            cutDetails
-        };
-    }
-
-    guillotineCutB(rect, items, fixedHeight = null) {
-        if (!items || items.length === 0 || rect.width <= 0 || rect.height <= 0) {
-            return { placed: [], unplaced: [...(items||[])], freeRects: [], cutDetails: [] };
-        }
-
-        // 1. rect에 들어갈 수 있는 부품 필터
-        const fittable = items.filter(item => {
-            if (item.height <= rect.height && item.width <= rect.width) return true;
-            if (item.rotatable && item.width <= rect.height && item.height <= rect.width) return true;
-            return false;
-        });
-
-        if (fittable.length === 0) {
-            return { placed: [], unplaced: [...items], freeRects: [rect], cutDetails: [] };
-        }
-
-        // 2. 높이 후보 수집
-        const heightCandidates = new Set();
-        fittable.forEach(item => {
-            if (item.height <= rect.height && item.width <= rect.width) {
-                heightCandidates.add(item.height);
-            }
-        });
-
-        // 3. 하부 짜투리 최소 높이 선택
-        let bestHeight = fixedHeight;
-        if (!bestHeight) {
-            let minWaste = Infinity;
-            for (const h of heightCandidates) {
-                const canFit = fittable.filter(item =>
-                    (item.height <= h && item.width <= rect.width) ||
-                    (item.rotatable && item.width <= h && item.height <= rect.width)
-                );
-                if (canFit.length === 0) continue;
-                // 가장 큰 부품이 이 높이에 들어가는지 확인
-                const largest = canFit[0];
-                const fitsNormal = largest.height <= h && largest.width <= rect.width;
-                const fitsRotated = largest.rotatable && largest.width <= h && largest.height <= rect.width;
-                if (!fitsNormal && !fitsRotated) continue;
-                const waste = rect.height - h;
-                if (waste < minWaste) {
-                    minWaste = waste;
-                    bestHeight = h;
-                }
-            }
-        }
-
-        if (!bestHeight) {
-            return { placed: [], unplaced: [...items], freeRects: [rect], cutDetails: [] };
-        }
-
-        // 4. 부품 배치 (면적 큰 순, 좌→우)
-        const stripItems = fittable
-            .filter(item =>
-                item.height === bestHeight && item.width <= rect.width
-            )
-            .sort((a, b) => (b.width * b.height) - (a.width * a.height));
-
-        const placed = [];
-        const cutDetails = [];
-        const placedIds = new Set();
-        let currentX = rect.x;
-
-        for (const item of stripItems) {
-            if (placedIds.has(item.id)) continue;
-            let w = item.width, h = item.height, rotated = false;
-            if (h > bestHeight && item.rotatable && item.width <= bestHeight) {
-                w = item.height; h = item.width; rotated = true;
-            }
-            if (h > bestHeight) continue;
-            const x = currentX === rect.x ? rect.x : currentX + this.kerf;
-            if (x + w > rect.x + rect.width) continue;
-            placed.push({ ...item, x, y: rect.y, width: w, height: h, rotated });
-            placedIds.add(item.id);
-            currentX = x + w;
-        }
-
-        let remaining = items.filter(i => !placedIds.has(i.id));
-        const freeRects = [];
-
-        // 5. 우측 공간 → 재귀
-        const rightX = currentX + this.kerf;
-        const rightW = rect.x + rect.width - rightX;
-        if (rightW > 0 && remaining.length > 0) {
-            const rightResult = this.guillotineCutB(
-                { x: rightX, y: rect.y, width: rightW, height: bestHeight },
-                remaining
-            );
-            placed.push(...rightResult.placed);
-            remaining = rightResult.unplaced;
-            freeRects.push(...rightResult.freeRects);
-            cutDetails.push(...(rightResult.cutDetails || []));
-        } else if (rightW > 0) {
-            freeRects.push({ x: rightX, y: rect.y, width: rightW, height: bestHeight });
-        }
-
-        // 6. 하단 공간 → 재귀
-        const bottomY = rect.y + bestHeight + this.kerf;
-        const bottomH = rect.y + rect.height - bottomY;
-        if (bottomH > 0 && remaining.length > 0) {
-            const bottomResult = this.guillotineCutB(
-                { x: rect.x, y: bottomY, width: rect.width, height: bottomH },
-                remaining
-            );
-            placed.push(...bottomResult.placed);
-            remaining = bottomResult.unplaced;
-            freeRects.push(...bottomResult.freeRects);
-            cutDetails.push(...(bottomResult.cutDetails || []));
-        } else if (bottomH > 0) {
-            freeRects.push({ x: rect.x, y: bottomY, width: rect.width, height: bottomH });
         }
 
         return {
@@ -944,7 +732,6 @@ class AdaptiveGuillotineBin {
     fillHorizontalStrip(rect, stripStartY, stripHeight, items) {
         const oriented = [];
         const cutDetails = [];
-        const freeRects = [];
 
         items.forEach(item => {
             if (item.height === stripHeight && item.width <= rect.width) {
@@ -987,18 +774,6 @@ class AdaptiveGuillotineBin {
                 rotated: candidate.rotated
             });
 
-            // 부품 아래 남은 공간 freeRect 등록
-            const itemBottomY = stripStartY + candidate.height;
-            const remainingH = stripHeight - candidate.height;
-            if (remainingH > 0) {
-                freeRects.push({
-                    x: x,
-                    y: itemBottomY,
-                    width: candidate.width,
-                    height: remainingH
-                });
-            }
-
             placedIds.add(candidate.item.id);
             currentX = x + candidate.width;
             usedWidthEnd = currentX;
@@ -1031,7 +806,6 @@ class AdaptiveGuillotineBin {
             stripSize: stripHeight,
             usedArea,
             rightFreeRect,
-            bottomFreeRects: freeRects,
             cutDetails
         };
     }
@@ -1211,32 +985,6 @@ class AdaptiveGuillotineBin {
         // 기준 문서(가로세로_알고리즘_정리.md)에는 단절 패널티 수치가 정의되어 있지 않음
         // 현재 단계에서는 임의 계수 없이 고정값 0을 사용
         return 0;
-    }
-}
-
-class AdaptiveGuillotineBinB extends AdaptiveGuillotineBin {
-    pack(items) {
-        const rootRect = { x: 0, y: 0, width: this.width, height: this.height };
-        const result = this.guillotineCutB(rootRect, items);
-        const usedArea = result.placed.reduce((s, p) => s + p.width * p.height, 0);
-        const totalArea = this.width * this.height;
-        const cutLinesX = new Set();
-        const cutLinesY = new Set();
-        result.placed.forEach(part => {
-            if (part.x + part.width < this.width) cutLinesX.add(part.x + part.width);
-            if (part.y + part.height < this.height) cutLinesY.add(part.y + part.height);
-        });
-        return {
-            placed: result.placed,
-            unplaced: result.unplaced,
-            freeRects: result.freeRects,
-            efficiency: (usedArea / totalArea) * 100,
-            usedArea,
-            totalArea,
-            cuttingCount: cutLinesX.size + cutLinesY.size,
-            firstCutDirection: 'H',
-            cutDetails: result.cutDetails || []
-        };
     }
 }
 

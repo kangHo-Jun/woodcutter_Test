@@ -514,8 +514,14 @@ class CuttingAppMobile {
     }
 
     checkInputValidation() {
-        const boardW = parseInt(document.getElementById('boardWidth').value);
-        const boardH = parseInt(document.getElementById('boardHeight').value);
+        const boardW = Math.max(
+          parseInt(document.getElementById('boardWidth').value),
+          parseInt(document.getElementById('boardHeight').value)
+        );
+        const boardH = Math.min(
+          parseInt(document.getElementById('boardWidth').value),
+          parseInt(document.getElementById('boardHeight').value)
+        );
         const inputW = parseInt(this.inputValues.width) || 0;
         const inputH = parseInt(this.inputValues.height) || 0;
 
@@ -813,10 +819,31 @@ class CuttingAppMobile {
             this.renderer = new CuttingRenderer('resultCanvas');
         }
 
-        const boardW = parseInt(document.getElementById('boardWidth').value);
-        const boardH = parseInt(document.getElementById('boardHeight').value);
+        const boardW = Math.max(
+          parseInt(document.getElementById('boardWidth').value),
+          parseInt(document.getElementById('boardHeight').value)
+        );
+        const boardH = Math.min(
+          parseInt(document.getElementById('boardWidth').value),
+          parseInt(document.getElementById('boardHeight').value)
+        );
 
-        const legend = this.renderer.render(boardW, boardH, bin.placed, this.kerf);
+        const renderW = Math.max(boardW, boardH);
+        const renderH = Math.min(boardW, boardH);
+
+        // 부품 좌표 변환 (세로계산→가로도면)
+        let placedItems = bin.placed;
+        if (boardW < boardH) {
+            placedItems = bin.placed.map(p => ({
+                ...p,
+                x: p.y,
+                y: p.x,
+                width: p.height,
+                height: p.width
+            }));
+        }
+
+        const legend = this.renderer.render(renderW, renderH, placedItems, this.kerf);
 
         // Update indicator
         document.getElementById('boardIndicator').textContent =
