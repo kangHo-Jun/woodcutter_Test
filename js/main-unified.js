@@ -788,6 +788,46 @@ class WoodcutterApp {
             }
         });
 
+        // 절단선 표시 (cutDetails 기반)
+        const bin_cutDetails = bin.cutDetails || [];
+        // 중복 제거: 같은 axis+pos면 span 짧은 것 우선
+        const cutMap = new Map();
+        bin_cutDetails.forEach(c => {
+            const key = `${c.axis}_${Math.round(c.pos)}`;
+            if (!cutMap.has(key)) {
+                cutMap.set(key, c);
+            } else {
+                const existing = cutMap.get(key);
+                const existingSpan = existing.spanEnd - existing.spanStart;
+                const newSpan = c.spanEnd - c.spanStart;
+                if (newSpan < existingSpan) {
+                    cutMap.set(key, c);
+                }
+            }
+        });
+        const uniqueCuts = Array.from(cutMap.values());
+
+        // 절단선 그리기
+        uniqueCuts.forEach(cut => {
+            const spanLength = cut.spanEnd - cut.spanStart;
+            if (spanLength < 50) return;
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 0.8;
+            ctx.setLineDash([4, 3]);
+            if (cut.axis === 'X') {
+                const cx = cut.pos * drawScale;
+                ctx.moveTo(padding + cx, padding + cut.spanStart * drawScale);
+                ctx.lineTo(padding + cx, padding + cut.spanEnd * drawScale);
+            } else {
+                const cy = cut.pos * drawScale;
+                ctx.moveTo(padding + cut.spanStart * drawScale, padding + cy);
+                ctx.lineTo(padding + cut.spanEnd * drawScale, padding + cy);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+        });
+
         const renderedPlaced = bin.placed.map(part => ({
             source: part,
             x: part.x,
@@ -802,9 +842,23 @@ class WoodcutterApp {
             const y = padding + part.y * drawScale;
             const w = part.width * drawScale;
             const h = part.height * drawScale;
+            const label = LabelingEngine.findLabel(part.width, part.height, labeledGroups);
 
             // 부품 배경
-            ctx.fillStyle = '#FFFFFF';
+            const PART_COLORS = [
+                '#DBEAFE', // A - 연파랑
+                '#DCFCE7', // B - 연초록
+                '#FEF9C3', // C - 연노랑
+                '#FFEDD5', // D - 연주황
+                '#F3E8FF', // E - 연보라
+                '#FCE7F3', // F - 연핑크
+                '#E0F2FE', // G - 하늘
+                '#ECFDF5', // H - 민트
+            ];
+
+            const labelIndex = label ? label.charCodeAt(0) - 65 : 0;
+            const partColor = PART_COLORS[labelIndex % PART_COLORS.length] || '#FFFFFF';
+            ctx.fillStyle = partColor;
             ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
 
             // 절단선 (부품 테두리 = 절단선)
@@ -813,7 +867,6 @@ class WoodcutterApp {
             ctx.strokeRect(x, y, w, h);
 
             // 라벨
-            const label = LabelingEngine.findLabel(part.width, part.height, labeledGroups);
             const FONT_NORMAL = 11;
             const FONT_SMALL = 7;
 
@@ -929,46 +982,46 @@ class WoodcutterApp {
         ctx.fillText(`${this.state.boardSpec.width} mm`, 0, 0);
         ctx.restore();
 
-        // === 잔여 영역 표시: 가로 최소 잔여 + 세로 최소 잔여 ===
-        const renderedBin = { placed: renderedPlaced };
-        const residuals = this.getAxisMinResiduals(renderedBin, renderBoardWidth, renderBoardHeight);
-        const maxX = Math.max(...renderedPlaced.map(part => part.x + part.width), 0);
-        const maxY = Math.max(...renderedPlaced.map(part => part.y + part.height), 0);
-        const rightRemnantWidth = Math.max(0, renderBoardWidth - maxX);
-        const bottomRemnantHeight = Math.max(0, renderBoardHeight - maxY);
+        // === 잔여 영역 치수 표시 (freeRects 기반) ===
+        const MIN_AREA = 20000; // 20,000mm² 이상만 표시
 
-        if (bottomRemnantHeight > 0) {
-            ctx.save();
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-            ctx.font = 'bold 16px "Noto Sans KR", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.translate(
-                padding + (renderBoardWidth * drawScale) / 2,
-                padding + (maxY + bottomRemnantHeight / 2) * drawScale
-            );
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillText(
-                `${Math.round(bottomRemnantHeight)}`,
-                0,
-                0
-            );
-            ctx.restore();
-        }
+        (bin.freeRects || []).forEach(rect => {
+            console.log('freeRect:', rect.x, rect.y, rect.width, rect.height, 'area:', rect.width*rect.height);
+            // isPortraitBoard=false 이므로 좌표 변환 없이 사용
+            const rw = rect.width;
+            const rh = rect.height;
+            const rx = rect.x;
+            const ry = rect.y;
 
-        if (rightRemnantWidth > 0) {
-            ctx.save();
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-            ctx.font = 'bold 16px "Noto Sans KR", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(
-                `${Math.round(rightRemnantWidth)}`,
-                padding + (maxX + rightRemnantWidth / 2) * drawScale,
-                padding + (renderBoardHeight * drawScale) / 2
-            );
-            ctx.restore();
-        }
+            // 면적 조건
+            if (rw * rh < MIN_AREA) return;
+
+            const rxPx = padding + rx * drawScale;
+            const ryPx = padding + ry * drawScale;
+            const rwPx = rw * drawScale;
+            const rhPx = rh * drawScale;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.font = 'bold 13px "Noto Sans KR", sans-serif';
+
+            // 가로 치수 (상단 중앙)
+            if (rw >= 50) {
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(`${Math.round(rw)}`, rxPx + rwPx / 2, ryPx + 4);
+            }
+
+            // 세로 치수 (좌측 중앙, 90도 회전)
+            if (rh >= 50) {
+                ctx.save();
+                ctx.translate(rxPx + 12, ryPx + rhPx / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${Math.round(rh)}`, 0, 0);
+                ctx.restore();
+            }
+        });
     }
 
     getAxisMinResiduals(bin, boardWidth, boardHeight) {

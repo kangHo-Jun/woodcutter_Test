@@ -854,11 +854,30 @@ class AdaptiveGuillotineBin {
                 if (bottomH > 0) {
                     freeRects.push({ x: rect.x, y: bottomY, width: rect.width, height: bottomH });
                 }
+                const cutDetails = [];
+                const w = longDim;
+                const h = shortDim;
+                if (w < rect.width) {
+                    cutDetails.push({
+                        axis: 'X',
+                        pos: rect.x + w,
+                        spanStart: rect.y,
+                        spanEnd: rect.y + h
+                    });
+                }
+                if (h < rect.height) {
+                    cutDetails.push({
+                        axis: 'Y',
+                        pos: rect.y + h,
+                        spanStart: rect.x,
+                        spanEnd: rect.x + rect.width
+                    });
+                }
                 return {
                     placed,
                     unplaced: remaining,
                     freeRects: this.normalizeFreeRects(freeRects),
-                    cutDetails: []
+                    cutDetails
                 };
             }
         }
@@ -895,15 +914,15 @@ class AdaptiveGuillotineBin {
         // 5. 우측 공간 → 재귀
         const rightX = currentX + this.kerf;
         const rightW = rect.x + rect.width - rightX;
+        let rightResult = null;
         if (rightW > 0 && remaining.length > 0) {
-            const rightResult = this.guillotineCutB(
+            rightResult = this.guillotineCutB(
                 { x: rightX, y: rect.y, width: rightW, height: bestHeight },
                 remaining
             );
             placed.push(...rightResult.placed);
             remaining = rightResult.unplaced;
             freeRects.push(...rightResult.freeRects);
-            cutDetails.push(...(rightResult.cutDetails || []));
         } else if (rightW > 0) {
             freeRects.push({ x: rightX, y: rect.y, width: rightW, height: bestHeight });
         }
@@ -911,18 +930,46 @@ class AdaptiveGuillotineBin {
         // 6. 하단 공간 → 재귀
         const bottomY = rect.y + bestHeight + this.kerf;
         const bottomH = rect.y + rect.height - bottomY;
+        let bottomResult = null;
         if (bottomH > 0 && remaining.length > 0) {
-            const bottomResult = this.guillotineCutB(
+            bottomResult = this.guillotineCutB(
                 { x: rect.x, y: bottomY, width: rect.width, height: bottomH },
                 remaining
             );
             placed.push(...bottomResult.placed);
             remaining = bottomResult.unplaced;
             freeRects.push(...bottomResult.freeRects);
-            cutDetails.push(...(bottomResult.cutDetails || []));
         } else if (bottomH > 0) {
             freeRects.push({ x: rect.x, y: bottomY, width: rect.width, height: bottomH });
         }
+
+        // 가로 절단선 (bestHeight 위치, 현재 rect 전체 길이 관통)
+        if (bestHeight < rect.height) {
+            cutDetails.push({
+                axis: 'Y',
+                pos: rect.y + bestHeight,
+                spanStart: rect.x,
+                spanEnd: rect.x + rect.width
+            });
+        }
+
+        // 세로 절단선 (각 부품 우측, 현재 스트립 폭 관통)
+        let prevX = rect.x;
+        placed.forEach(p => {
+            if (Math.round(p.x) > Math.round(prevX)) {
+                cutDetails.push({
+                    axis: 'X',
+                    pos: prevX === rect.x ? p.x : p.x,
+                    spanStart: rect.y,
+                    spanEnd: rect.y + bestHeight
+                });
+            }
+            prevX = p.x + p.width;
+        });
+
+        // 재귀 결과 cutDetails 합치기
+        if (rightResult) cutDetails.push(...(rightResult.cutDetails || []));
+        if (bottomResult) cutDetails.push(...(bottomResult.cutDetails || []));
 
         return {
             placed,
