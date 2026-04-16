@@ -160,7 +160,7 @@ class CostCalculator {
             prev = pos + kerf;
         });
 
-        const qualifyingWidths = actualWidths.filter(width => Number.isFinite(width) && Math.round(width) >= 90);
+        const qualifyingWidths = actualWidths.filter(width => Number.isFinite(width) && Math.round(width) >= 50);
 
         if (qualifyingWidths.length === 0) {
             return 0;

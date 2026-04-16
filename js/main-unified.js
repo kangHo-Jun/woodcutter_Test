@@ -949,7 +949,7 @@ class WoodcutterApp {
             );
             ctx.rotate(-Math.PI / 2);
             ctx.fillText(
-                `${Math.round(bottomRemnantHeight)}mm`,
+                `${Math.round(bottomRemnantHeight)}`,
                 0,
                 0
             );
@@ -963,7 +963,7 @@ class WoodcutterApp {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(
-                `${Math.round(rightRemnantWidth)}mm`,
+                `${Math.round(rightRemnantWidth)}`,
                 padding + (maxX + rightRemnantWidth / 2) * drawScale,
                 padding + (renderBoardHeight * drawScale) / 2
             );
