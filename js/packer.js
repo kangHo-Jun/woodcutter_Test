@@ -45,7 +45,7 @@ class GuillotinePacker {
         }
 
         const result = this.packAdaptiveAuto(items);
-        result.engine = 'adaptive';
+        result.engine = result.engine || 'adaptive';
         return result;
     }
 
@@ -124,14 +124,157 @@ class GuillotinePacker {
             selectedUnplaced = remainingB;
             selectedEngine = 'B';
         }
+
+        const ripCandidate = this.buildLengthRipCandidate(expandedItems);
+        if (ripCandidate && this.shouldPreferLengthRip(ripCandidate, selectedBins, selectedUnplaced)) {
+            selectedBins = ripCandidate.bins;
+            selectedUnplaced = ripCandidate.unplaced;
+            selectedEngine = 'RIP';
+        }
         console.log(`[ALGO] A판재:${binsA.length} B판재:${binsB.length} 선택:${selectedEngine}`);
 
         return {
             bins: selectedBins,
             unplaced: selectedUnplaced,
             totalEfficiency: this.calculateTotalEfficiency(selectedBins),
-            mode: 'auto'
+            mode: 'auto',
+            engine: selectedEngine === 'RIP' ? 'rip' : selectedEngine
         };
+    }
+
+    buildLengthRipCandidate(items) {
+        if (!items || items.length === 0) return null;
+
+        const orientations = items.map(item => this.getLengthRipOrientation(item));
+        if (orientations.some(orientation => !orientation)) return null;
+
+        const bins = [];
+        let remaining = orientations.map((orientation, index) => ({
+            item: items[index],
+            ...orientation
+        }));
+
+        while (remaining.length > 0) {
+            const placed = [];
+            const cutDetails = [];
+            const nextRemaining = [];
+            let currentY = 0;
+
+            remaining.forEach(entry => {
+                const y = placed.length === 0 ? currentY : currentY + this.kerf;
+                if (y + entry.height > this.binHeight) {
+                    nextRemaining.push(entry);
+                    return;
+                }
+
+                placed.push({
+                    ...entry.item,
+                    x: 0,
+                    y,
+                    width: this.binWidth,
+                    height: entry.height,
+                    rotated: entry.rotated
+                });
+
+                currentY = y + entry.height;
+                if (currentY < this.binHeight) {
+                    cutDetails.push({
+                        axis: 'Y',
+                        pos: currentY,
+                        spanStart: 0,
+                        spanEnd: this.binWidth
+                    });
+                }
+            });
+
+            if (placed.length === 0) return null;
+
+            const usedArea = placed.reduce((sum, part) => sum + part.width * part.height, 0);
+            const totalArea = this.binWidth * this.binHeight;
+            const freeRects = [];
+            const bottomY = currentY + this.kerf;
+            if (bottomY < this.binHeight) {
+                freeRects.push({
+                    x: 0,
+                    y: bottomY,
+                    width: this.binWidth,
+                    height: this.binHeight - bottomY
+                });
+            }
+
+            bins.push({
+                width: this.binWidth,
+                height: this.binHeight,
+                placed,
+                unplaced: [],
+                freeRects,
+                efficiency: (usedArea / totalArea) * 100,
+                usedArea,
+                totalArea,
+                cuttingCount: cutDetails.length,
+                firstCutDirection: 'RIP',
+                cutDetails,
+                ripOptimized: true
+            });
+
+            remaining = nextRemaining;
+        }
+
+        return {
+            bins,
+            unplaced: [],
+            totalEfficiency: this.calculateTotalEfficiency(bins),
+            mode: 'auto',
+            engine: 'rip'
+        };
+    }
+
+    getLengthRipOrientation(item) {
+        if (Math.round(item.width) === Math.round(this.binWidth) && item.height <= this.binHeight) {
+            return {
+                width: this.binWidth,
+                height: item.height,
+                rotated: !!item.rotated
+            };
+        }
+
+        if (item.rotatable &&
+            Math.round(item.height) === Math.round(this.binWidth) &&
+            item.width <= this.binHeight) {
+            return {
+                width: this.binWidth,
+                height: item.width,
+                rotated: !item.rotated
+            };
+        }
+
+        return null;
+    }
+
+    shouldPreferLengthRip(ripCandidate, selectedBins, selectedUnplaced) {
+        if (!ripCandidate || !ripCandidate.bins || ripCandidate.bins.length === 0) return false;
+        if (ripCandidate.unplaced && ripCandidate.unplaced.length > 0) return false;
+        if (!selectedBins || selectedBins.length === 0) return true;
+        if (selectedUnplaced && selectedUnplaced.length > 0) return true;
+        if (ripCandidate.bins.length > selectedBins.length) return false;
+        if (ripCandidate.bins.length < selectedBins.length) return true;
+        if (typeof window === 'undefined' || !window.CostCalculator) return false;
+
+        const settings = window.SettingsManager
+            ? window.SettingsManager.readFromUI()
+            : {
+                enableTrim: false,
+                cutPrice: window.CostCalculator.getCutPriceByThickness(
+                    window.CostCalculator.getBoardThickness()
+                )
+            };
+        const ripCost = window.CostCalculator.calculate(ripCandidate.bins, settings).totalCuttingCost;
+        const selectedCost = window.CostCalculator.calculate(selectedBins, settings).totalCuttingCost;
+        const hasRipFixedPrice = ripCandidate.bins.some(bin =>
+            window.CostCalculator.getLongSidePanelFixedPrice(bin) > 0
+        );
+
+        return hasRipFixedPrice && ripCost < selectedCost;
     }
 
     /**
@@ -548,6 +691,8 @@ class AdaptiveGuillotineBin {
         const totalArea = this.width * this.height;
 
         return {
+            width: this.width,
+            height: this.height,
             placed: selected.placed,
             unplaced: selected.unplaced,
             freeRects: selected.freeRects,
@@ -1352,6 +1497,8 @@ class AdaptiveGuillotineBinB extends AdaptiveGuillotineBin {
         const totalArea = this.width * this.height;
         const cutDetails = this.filterCutDetailsByPlaced(result.cutDetails || [], result.placed);
         return {
+            width: this.width,
+            height: this.height,
             placed: result.placed,
             unplaced: result.unplaced,
             freeRects: result.freeRects,

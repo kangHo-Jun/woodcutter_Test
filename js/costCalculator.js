@@ -142,12 +142,21 @@ class CostCalculator {
             return 0;
         }
 
-        if (bin.cutDetails.some(detail => detail && detail.fullSpan !== true)) {
+        const maxSpanEnd = Math.max(...bin.cutDetails
+            .map(detail => detail && detail.spanEnd)
+            .filter(value => Number.isFinite(value)));
+        const lengthSpan = Number.isFinite(bin.width) ? bin.width : maxSpanEnd;
+        const isLongRipCut = detail => detail
+            && detail.axis === 'Y'
+            && Math.round(detail.spanStart) === 0
+            && Math.round(detail.spanEnd) === Math.round(lengthSpan);
+
+        if (bin.cutDetails.some(detail => !isLongRipCut(detail))) {
             return 0;
         }
 
         const positions = bin.cutDetails
-            .filter(detail => detail && detail.fullSpan === true)
+            .filter(isLongRipCut)
             .map(detail => detail.pos)
             .filter(pos => Number.isFinite(pos))
             .sort((a, b) => a - b);
