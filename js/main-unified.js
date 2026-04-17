@@ -529,8 +529,8 @@ class WoodcutterApp {
 
             const rawW = trimEnabled ? effectiveBoardWidth : this.state.boardSpec.width;
             const rawH = trimEnabled ? effectiveBoardHeight : this.state.boardSpec.height;
-            const packerW = Math.max(rawW, rawH);
-            const packerH = Math.min(rawW, rawH);
+            const packerW = rawH; // 길이 = 항상 가로(X축)
+            const packerH = rawW; // 폭 = 항상 세로(Y축)
             const packer = new GuillotinePacker(packerW, packerH, settings.kerf);
 
             const considerGrain = this.state.boardSpec.considerGrain;
@@ -557,11 +557,15 @@ class WoodcutterApp {
                 };
             });
 
-            // 스왑 후 치수 기준 판재 초과 체크 (긴축/짧은축 기준)
-            const oversized = items.filter(item =>
-                Math.max(item.width, item.height) > Math.max(this.state.boardSpec.width, this.state.boardSpec.height) ||
-                Math.min(item.width, item.height) > Math.min(boardW, boardH)
-            );
+            // 스왑 후 치수 기준 판재 초과 체크
+            const oversized = this.state.cuttingList.filter(part => {
+                if (considerGrain || !part.rotatable) {
+                    return part.width > boardW || part.height > boardH;
+                }
+                const normalFit = part.width <= boardW && part.height <= boardH;
+                const rotatedFit = part.height <= boardW && part.width <= boardH;
+                return !normalFit && !rotatedFit;
+            });
             if (oversized.length > 0) {
                 calculateBtn.disabled = false;
                 calculateBtn.textContent = '최적화 계산';
@@ -742,8 +746,8 @@ class WoodcutterApp {
         const boardWidth = this.state.boardSpec.width - trimMargin;
         const boardHeight = this.state.boardSpec.height;
         const isPortraitBoard = false;
-        const renderBoardWidth = Math.max(boardWidth, boardHeight);
-        const renderBoardHeight = Math.min(boardWidth, boardHeight);
+        const renderBoardWidth = boardHeight;  // 길이 = 가로
+        const renderBoardHeight = boardWidth;  // 폭 = 세로
         const maxWidth = 700;
         const padding = 50;
         const drawScale = (maxWidth - padding * 2) / renderBoardWidth;
@@ -790,9 +794,26 @@ class WoodcutterApp {
 
         // 절단선 표시 (cutDetails 기반)
         const bin_cutDetails = bin.cutDetails || [];
+        const cutPlaced = bin.placed || [];
+        const isCutAlignedWithPlaced = (cut) => {
+            const pos = Math.round(cut.pos);
+            return cutPlaced.some(part => {
+                if (cut.axis === 'Y') {
+                    const edgeTop = Math.round(part.y);
+                    const edgeBottom = Math.round(part.y + part.height);
+                    const overlaps = cut.spanEnd > part.x && cut.spanStart < part.x + part.width;
+                    return overlaps && (pos === edgeTop || pos === edgeBottom);
+                }
+                const edgeLeft = Math.round(part.x);
+                const edgeRight = Math.round(part.x + part.width);
+                const overlaps = cut.spanEnd > part.y && cut.spanStart < part.y + part.height;
+                return overlaps && (pos === edgeLeft || pos === edgeRight);
+            });
+        };
         // 중복 제거: 같은 axis+pos면 span 짧은 것 우선
         const cutMap = new Map();
         bin_cutDetails.forEach(c => {
+            if (!isCutAlignedWithPlaced(c)) return;
             const key = `${c.axis}_${Math.round(c.pos)}`;
             if (!cutMap.has(key)) {
                 cutMap.set(key, c);
@@ -974,20 +995,21 @@ class WoodcutterApp {
         ctx.fillStyle = '#333';
         ctx.font = '14px "Noto Sans KR", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${this.state.boardSpec.height} mm`, padding + (renderBoardWidth * drawScale) / 2, padding - 20);
+        ctx.fillText(`${boardHeight} mm`, padding + (renderBoardWidth * drawScale) / 2, padding - 20);
 
         ctx.save();
         ctx.translate(padding - 25, padding + (renderBoardHeight * drawScale) / 2);
         ctx.rotate(-Math.PI / 2);
-        ctx.fillText(`${this.state.boardSpec.width} mm`, 0, 0);
+        ctx.fillText(`${boardWidth} mm`, 0, 0);
         ctx.restore();
 
         // === 잔여 영역 치수 표시 (freeRects 기반) ===
         const MIN_AREA = 20000; // 20,000mm² 이상만 표시
+        const displayFreeRects = this.buildDisplayFreeRects(renderedPlaced, renderBoardWidth, renderBoardHeight);
 
-        (bin.freeRects || []).forEach(rect => {
-            console.log('freeRect:', rect.x, rect.y, rect.width, rect.height, 'area:', rect.width*rect.height);
-            // isPortraitBoard=false 이므로 좌표 변환 없이 사용
+        displayFreeRects.forEach(rect => {
+            // packer 기준: x=길이방향, y=폭방향
+            // 렌더링 기준: x=길이방향(가로), y=폭방향(세로)
             const rw = rect.width;
             const rh = rect.height;
             const rx = rect.x;
@@ -1022,6 +1044,64 @@ class WoodcutterApp {
                 ctx.restore();
             }
         });
+    }
+
+    buildDisplayFreeRects(placed, boardWidth, boardHeight) {
+        const xEdges = new Set([0, boardWidth]);
+        const yEdges = new Set([0, boardHeight]);
+
+        placed.forEach(part => {
+            xEdges.add(part.x);
+            xEdges.add(part.x + part.width);
+            yEdges.add(part.y);
+            yEdges.add(part.y + part.height);
+        });
+
+        const xs = Array.from(xEdges).sort((a, b) => a - b);
+        const ys = Array.from(yEdges).sort((a, b) => a - b);
+        const freeRects = [];
+
+        for (let yi = 0; yi < ys.length - 1; yi++) {
+            const y0 = ys[yi];
+            const y1 = ys[yi + 1];
+            const h = y1 - y0;
+            if (h <= 0) continue;
+
+            let current = null;
+            for (let xi = 0; xi < xs.length - 1; xi++) {
+                const x0 = xs[xi];
+                const x1 = xs[xi + 1];
+                const w = x1 - x0;
+                if (w <= 0) continue;
+
+                const cx = x0 + w / 2;
+                const cy = y0 + h / 2;
+                const occupied = placed.some(part =>
+                    cx >= part.x && cx <= part.x + part.width &&
+                    cy >= part.y && cy <= part.y + part.height
+                );
+
+                if (occupied) {
+                    if (current) {
+                        freeRects.push(current);
+                        current = null;
+                    }
+                    continue;
+                }
+
+                if (current) {
+                    current.width += w;
+                } else {
+                    current = { x: x0, y: y0, width: w, height: h };
+                }
+            }
+
+            if (current) {
+                freeRects.push(current);
+            }
+        }
+
+        return freeRects;
     }
 
     getAxisMinResiduals(bin, boardWidth, boardHeight) {

@@ -95,8 +95,8 @@ class GuillotinePacker {
         const binsB = [];
         let remainingB = [...expandedItems];
         while (remainingB.length > 0) {
-            const binW = Math.max(this.binWidth, this.binHeight);
-            const binH = Math.min(this.binWidth, this.binHeight);
+            const binW = this.binWidth;
+            const binH = this.binHeight;
             const bin = new AdaptiveGuillotineBinB(binW, binH, this.kerf);
             const result = bin.pack(remainingB);
             if (result.placed.length === 0) break;
@@ -1253,6 +1253,29 @@ class AdaptiveGuillotineBin {
         };
     }
 
+    filterCutDetailsByPlaced(cutDetails, placed) {
+        if (!Array.isArray(cutDetails) || !Array.isArray(placed)) {
+            return [];
+        }
+
+        return cutDetails.filter(cut => {
+            const pos = Math.round(cut.pos);
+            return placed.some(part => {
+                if (cut.axis === 'Y') {
+                    const edgeTop = Math.round(part.y);
+                    const edgeBottom = Math.round(part.y + part.height);
+                    const overlaps = cut.spanEnd > part.x && cut.spanStart < part.x + part.width;
+                    return overlaps && (pos === edgeTop || pos === edgeBottom);
+                }
+
+                const edgeLeft = Math.round(part.x);
+                const edgeRight = Math.round(part.x + part.width);
+                const overlaps = cut.spanEnd > part.y && cut.spanStart < part.y + part.height;
+                return overlaps && (pos === edgeLeft || pos === edgeRight);
+            });
+        });
+    }
+
     collectStripSizes(items, maxPrimarySize, crossSize, direction) {
         const sizes = new Set();
 
@@ -1327,12 +1350,7 @@ class AdaptiveGuillotineBinB extends AdaptiveGuillotineBin {
         const result = this.guillotineCutB(rootRect, items);
         const usedArea = result.placed.reduce((s, p) => s + p.width * p.height, 0);
         const totalArea = this.width * this.height;
-        const cutLinesX = new Set();
-        const cutLinesY = new Set();
-        result.placed.forEach(part => {
-            if (part.x + part.width < this.width) cutLinesX.add(part.x + part.width);
-            if (part.y + part.height < this.height) cutLinesY.add(part.y + part.height);
-        });
+        const cutDetails = this.filterCutDetailsByPlaced(result.cutDetails || [], result.placed);
         return {
             placed: result.placed,
             unplaced: result.unplaced,
@@ -1340,9 +1358,9 @@ class AdaptiveGuillotineBinB extends AdaptiveGuillotineBin {
             efficiency: (usedArea / totalArea) * 100,
             usedArea,
             totalArea,
-            cuttingCount: cutLinesX.size + cutLinesY.size,
+            cuttingCount: cutDetails.length,
             firstCutDirection: 'H',
-            cutDetails: result.cutDetails || []
+            cutDetails
         };
     }
 }
