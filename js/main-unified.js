@@ -545,10 +545,10 @@ class WoodcutterApp {
                 // 나무결 ON: 부품 긴값 → 판재 긴축, 부품 짧은값 → 판재 짧은축
                 const pw = considerGrain
                     ? (boardLongIsX ? Math.max(part.width, part.height) : Math.min(part.width, part.height))
-                    : part.width;
+                    : (!part.rotatable ? part.height : part.width);
                 const ph = considerGrain
                     ? (boardLongIsX ? Math.min(part.width, part.height) : Math.max(part.width, part.height))
-                    : part.height;
+                    : (!part.rotatable ? part.width : part.height);
                 return {
                     width: pw,
                     height: ph,
