@@ -69,12 +69,15 @@
                 <div style="border-top: 1px solid #e0e0e0; margin-top: 12px; padding-top: 12px;">
                     <!-- 전단여부 라인 -->
                     <div class="checkbox-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <input type="checkbox" id="enableTrim" checked>
+                        <input type="checkbox" id="enableTrim">
                         <label for="enableTrim" style="margin: 0; flex-shrink: 0; min-width: 80px;">전단여부</label>
                         <div style="display: flex; align-items: center; gap: 4px;">
                             <input type="number" id="trimMargin" value="5" min="0" max="50" step="0.1" placeholder="치수" style="width: 70px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
                             <span style="color: #666; font-size: 13px; flex-shrink: 0;">mm</span>
                         </div>
+                    </div>
+                    <div id="trimWarning" style="display:none; color:orange; font-size:12px;">
+                        ⚠ 정확한 규격 재단을 원할 경우만 사용(약 14mm 소실됨)
                     </div>
                     <!-- 톱날 두께 라인 (들여쓰기) -->
                     <div style="display: flex; align-items: center; gap: 8px; margin-left: 24px;">
