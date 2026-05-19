@@ -248,8 +248,8 @@ class WoodcutterApp {
             } else {
                 partRotatable.disabled = false;
                 partRotatable.checked = true;
-                // 나무결 OFF 전환 시 기존 부품 rotatable 동기화
-                this.state.cuttingList.forEach(part => { part.rotatable = true; });
+                // 나무결 OFF 전환 시 기존 부품 allowRotate 동기화
+                this.state.cuttingList.forEach(part => { part.allowRotate = true; });
                 this.state.update('cuttingList', this.state.cuttingList);
             }
         }
@@ -317,7 +317,7 @@ class WoodcutterApp {
         const width = parseFloat(partWidthEl.value);
         const height = parseFloat(partHeightEl.value);
         const qty = parseInt(partQtyEl.value) || 1;
-        const rotatable = partRotatableEl ? partRotatableEl.checked : true;
+        const allowRotate = partRotatableEl ? partRotatableEl.checked : true;
 
         // 최솟값(10mm) 및 숫자 여부만 체크 — 판재 상한 체크는 계산 시 수행
         let hasError = false;
@@ -346,7 +346,7 @@ class WoodcutterApp {
 
         if (hasError) return;
 
-        this.state.addPart({ width, height, qty, rotatable });
+        this.state.addPart({ width, height, qty, allowRotate });
 
         partWidthEl.value = '';
         partHeightEl.value = '';
@@ -376,7 +376,7 @@ class WoodcutterApp {
             <tr>
                 <td contenteditable="true" data-index="${index}" data-field="dimensions" class="editable-cell">${part.width}×${part.height}</td>
                 <td contenteditable="true" data-index="${index}" data-field="qty" class="editable-cell">${part.qty}</td>
-                <td>${part.rotatable ? 'O' : 'X'}</td>
+                <td>${part.allowRotate ? 'O' : 'X'}</td>
                 <td>
                     <button class="delete-btn" data-index="${index}">삭제</button>
                 </td>
@@ -552,24 +552,25 @@ class WoodcutterApp {
             const boardShort = Math.min(boardW, boardH);
 
             const items = this.state.cuttingList.map(part => {
+                const effectiveAllowRotate = part.allowRotate && !considerGrain;
                 // 나무결 ON: 부품 긴값 → 판재 긴축, 부품 짧은값 → 판재 짧은축
                 const pw = considerGrain
                     ? (boardLongIsX ? Math.max(part.width, part.height) : Math.min(part.width, part.height))
-                    : (!part.rotatable ? part.height : part.width);
+                    : (!part.allowRotate ? part.height : part.width);
                 const ph = considerGrain
                     ? (boardLongIsX ? Math.min(part.width, part.height) : Math.max(part.width, part.height))
-                    : (!part.rotatable ? part.width : part.height);
+                    : (!part.allowRotate ? part.width : part.height);
                 return {
                     width: pw,
                     height: ph,
                     qty: part.qty,
-                    rotatable: part.rotatable && !considerGrain
+                    allowRotate: effectiveAllowRotate
                 };
             });
 
             // 스왑 후 치수 기준 판재 초과 체크
             const oversized = this.state.cuttingList.filter(part => {
-                if (considerGrain || !part.rotatable) {
+                if (considerGrain || !part.allowRotate) {
                     return part.width > boardW || part.height > boardH;
                 }
                 const normalFit = part.width <= boardW && part.height <= boardH;

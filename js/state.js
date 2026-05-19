@@ -57,7 +57,7 @@ class AppState {
 
     /**
      * 부품 추가
-     * @param {Object} part - {width, height, qty, rotatable}
+     * @param {Object} part - {width, height, qty, allowRotate}
      */
     addPart(part) {
         this.cuttingList.push(part);

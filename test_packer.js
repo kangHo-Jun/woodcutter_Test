@@ -39,4 +39,21 @@ console.log('TC2 (단일부품):', pass2 ? '✅통과' : '❌실패',
   'bins:', result2.bins.length,
   placed2 ? `배치: ${placed2.width}×${placed2.height} x:${Math.round(placed2.x)} y:${Math.round(placed2.y)}` : 'unplaced');
 
-console.log('최종:', pass1 && pass2 ? '✅전체통과' : '❌실패');
+// 테스트 3: 면적 하한 목표 배치 (기존 2장 가능성 케이스를 1장으로 압축)
+const items3 = [
+  { width: 276, height: 336, qty: 1, rotatable: true },
+  { width: 646, height: 888, qty: 1, rotatable: true },
+  { width: 1212, height: 175, qty: 1, rotatable: true },
+  { width: 274, height: 771, qty: 1, rotatable: true },
+  { width: 1515, height: 700, qty: 1, rotatable: true }
+];
+
+const packer3 = new GP(2440, 1220, 4.2);
+const result3 = packer3.pack(items3, 'auto');
+const pass3 = result3.bins.length === 1 && result3.unplaced.length === 0;
+console.log('TC3 (면적하한 혼합배치):', pass3 ? '✅통과' : '❌실패',
+  'bins:', result3.bins.length,
+  'unplaced:', result3.unplaced.length,
+  'engine:', result3.engine || 'unknown');
+
+console.log('최종:', pass1 && pass2 && pass3 ? '✅전체통과' : '❌실패');
