@@ -14,7 +14,7 @@ class GuillotinePacker {
 
     /**
      * 메인 패킹 메서드
-     * @param {Array} items - [{width, height, qty, allowRotate}]
+     * @param {Array} items - [{width, height, qty, rotatable}]
      * @param {string} mode - 'horizontal' | 'auto'
      */
     pack(items, mode = 'auto') {
@@ -165,28 +165,6 @@ class GuillotinePacker {
             selectedUnplaced = mixedRipCandidate.unplaced;
             selectedEngine = 'MIXED_RIP';
         }
-
-        const areaTargetCandidate = this.buildAreaTargetHybridCandidate(expandedItems, selectedBins, selectedUnplaced);
-        if (this.isValidPackingResult(areaTargetCandidate) &&
-            this.shouldPreferAreaTargetHybrid(areaTargetCandidate, selectedBins, selectedUnplaced)) {
-            selectedBins = areaTargetCandidate.bins;
-            selectedUnplaced = areaTargetCandidate.unplaced;
-            selectedEngine = 'AREA_TARGET_HYBRID';
-        }
-
-        const partitionCandidate = this.guillotinePartitionPlanner(
-            items,
-            this.binWidth,
-            this.binHeight,
-            this.getCurrentConsiderGrain()
-        );
-        if (this.isValidPackingResult(partitionCandidate) &&
-            partitionCandidate.unplaced.length === 0 &&
-            partitionCandidate.bins.length < selectedBins.length) {
-            selectedBins = partitionCandidate.bins;
-            selectedUnplaced = partitionCandidate.unplaced;
-            selectedEngine = 'GPP';
-        }
         console.log(`[ALGO] A판재:${binsA.length} B판재:${binsB.length} 선택:${selectedEngine}`);
 
         return {
@@ -196,11 +174,6 @@ class GuillotinePacker {
             mode: 'auto',
             engine: selectedEngine === 'RIP' || selectedEngine === 'MIXED_RIP' ? 'rip' : selectedEngine
         };
-    }
-
-    getCurrentConsiderGrain() {
-        if (typeof window === 'undefined') return false;
-        return !!window.app?.state?.boardSpec?.considerGrain;
     }
 
     buildLengthRipCandidate(items) {
@@ -299,7 +272,7 @@ class GuillotinePacker {
             };
         }
 
-        if (item.allowRotate &&
+        if (item.rotatable &&
             Math.round(item.height) === Math.round(this.binWidth) &&
             item.width <= this.binHeight) {
             return {
@@ -540,400 +513,6 @@ class GuillotinePacker {
         return hasRipFixedPrice && mixedCost < selectedCost;
     }
 
-    buildAreaTargetHybridCandidate(items, selectedBins, selectedUnplaced) {
-        if (!Array.isArray(items) || items.length === 0) return null;
-
-        const boardArea = this.binWidth * this.binHeight;
-        if (boardArea <= 0) return null;
-
-        const totalArea = items.reduce((sum, item) => sum + (item.width * item.height), 0);
-        const targetBinCount = Math.max(1, Math.ceil(totalArea / boardArea));
-        const selectedBinCount = Array.isArray(selectedBins) ? selectedBins.length : Infinity;
-
-        if (Number.isFinite(selectedBinCount) && targetBinCount >= selectedBinCount && (!selectedUnplaced || selectedUnplaced.length === 0)) {
-            return null;
-        }
-
-        const orderBuilders = [
-            list => [...list].sort((a, b) => (b.width * b.height) - (a.width * a.height)),
-            list => [...list].sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height)),
-            list => [...list].sort((a, b) => b.height - a.height || b.width - a.width),
-            list => [...list].sort((a, b) => b.width - a.width || b.height - a.height)
-        ];
-
-        let bestCandidate = null;
-        orderBuilders.forEach(buildOrder => {
-            const attempt = this.searchAreaTargetHybridLayout(buildOrder(items), targetBinCount);
-            if (!attempt) return;
-            if (!bestCandidate) {
-                bestCandidate = attempt;
-                return;
-            }
-
-            const bestCuts = this.getTotalCuttingCount(bestCandidate.bins);
-            const attemptCuts = this.getTotalCuttingCount(attempt.bins);
-            if (attempt.bins.length < bestCandidate.bins.length ||
-                (attempt.bins.length === bestCandidate.bins.length && attemptCuts < bestCuts)) {
-                bestCandidate = attempt;
-            }
-        });
-
-        return bestCandidate;
-    }
-
-    shouldPreferAreaTargetHybrid(candidate, selectedBins, selectedUnplaced) {
-        if (!candidate || !Array.isArray(candidate.bins) || candidate.bins.length === 0) return false;
-        if (candidate.unplaced && candidate.unplaced.length > 0) return false;
-        if (!selectedBins || selectedBins.length === 0) return true;
-        if (selectedUnplaced && selectedUnplaced.length > 0 && candidate.bins.length <= selectedBins.length) {
-            return true;
-        }
-        return candidate.bins.length < selectedBins.length;
-    }
-
-    searchAreaTargetHybridLayout(orderedItems, targetBinCount) {
-        const initialBins = Array.from({ length: targetBinCount }, () => this.createAreaTargetBinState());
-        let states = [{
-            bins: initialBins,
-            usedArea: 0,
-            cutCount: 0
-        }];
-
-        const beamWidth = 24;
-
-        for (const item of orderedItems) {
-            const nextStates = [];
-
-            states.forEach(state => {
-                const placements = this.enumerateAreaTargetPlacements(state, item);
-                placements.forEach(placement => nextStates.push(placement));
-            });
-
-            if (nextStates.length === 0) {
-                return null;
-            }
-
-            nextStates.sort((a, b) => this.scoreAreaTargetState(b) - this.scoreAreaTargetState(a));
-            states = nextStates.slice(0, beamWidth);
-        }
-
-        const finalState = [...states].sort((a, b) => this.compareAreaTargetFinalStates(a, b))[0];
-        if (!finalState) return null;
-
-        const bins = finalState.bins
-            .filter(bin => bin.placed.length > 0)
-            .map(bin => this.materializeAreaTargetBin(bin));
-
-        return {
-            bins,
-            unplaced: [],
-            totalEfficiency: this.calculateTotalEfficiency(bins),
-            mode: 'auto',
-            engine: 'area-target-hybrid'
-        };
-    }
-
-    createAreaTargetBinState() {
-        return {
-            width: this.binWidth,
-            height: this.binHeight,
-            placed: [],
-            freeRects: [{
-                x: 0,
-                y: 0,
-                width: this.binWidth,
-                height: this.binHeight
-            }],
-            cutDetails: [],
-            usedArea: 0
-        };
-    }
-
-    enumerateAreaTargetPlacements(state, item) {
-        const nextStates = [];
-
-        state.bins.forEach((bin, binIndex) => {
-            const sortedRects = bin.freeRects
-                .map((rect, rectIndex) => ({ rect, rectIndex }))
-                .sort((a, b) =>
-                    (b.rect.width * b.rect.height) - (a.rect.width * a.rect.height) ||
-                    a.rect.y - b.rect.y ||
-                    a.rect.x - b.rect.x
-                );
-
-            sortedRects.forEach(({ rect, rectIndex }) => {
-                this.getAreaTargetOrientations(item, rect).forEach(orientation => {
-                    ['H_SPLIT', 'V_SPLIT'].forEach(splitMode => {
-                        const nextState = this.placeAreaTargetItem(
-                            state,
-                            binIndex,
-                            rectIndex,
-                            item,
-                            rect,
-                            orientation,
-                            splitMode
-                        );
-                        if (nextState) {
-                            nextStates.push(nextState);
-                        }
-                    });
-                });
-            });
-        });
-
-        return nextStates;
-    }
-
-    getAreaTargetOrientations(item, rect) {
-        const orientations = [];
-        if (item.width <= rect.width && item.height <= rect.height) {
-            orientations.push({
-                width: item.width,
-                height: item.height,
-                rotated: !!item.rotated
-            });
-        }
-
-        if (item.allowRotate &&
-            item.height <= rect.width &&
-            item.width <= rect.height &&
-            !(item.width === item.height)) {
-            orientations.push({
-                width: item.height,
-                height: item.width,
-                rotated: !item.rotated
-            });
-        }
-
-        return orientations;
-    }
-
-    placeAreaTargetItem(state, binIndex, rectIndex, item, rect, orientation, splitMode) {
-        const bins = state.bins.map((bin, index) => {
-            if (index !== binIndex) {
-                return {
-                    ...bin,
-                    placed: [...bin.placed],
-                    freeRects: [...bin.freeRects],
-                    cutDetails: [...bin.cutDetails]
-                };
-            }
-            return {
-                ...bin,
-                placed: [...bin.placed],
-                freeRects: [...bin.freeRects],
-                cutDetails: [...bin.cutDetails]
-            };
-        });
-
-        const targetBin = bins[binIndex];
-        const nextFreeRects = targetBin.freeRects.filter((_, index) => index !== rectIndex);
-        const placedItem = {
-            ...item,
-            x: rect.x,
-            y: rect.y,
-            width: orientation.width,
-            height: orientation.height,
-            rotated: orientation.rotated
-        };
-
-        const split = this.splitAreaTargetRect(rect, orientation, splitMode);
-        targetBin.placed.push(placedItem);
-        targetBin.freeRects = this.normalizeAreaTargetFreeRects([
-            ...nextFreeRects,
-            ...split.freeRects
-        ]);
-        targetBin.cutDetails.push(...split.cutDetails);
-        targetBin.usedArea += placedItem.width * placedItem.height;
-
-        return {
-            bins,
-            usedArea: state.usedArea + (placedItem.width * placedItem.height),
-            cutCount: state.cutCount + split.cutDetails.length
-        };
-    }
-
-    splitAreaTargetRect(rect, orientation, splitMode) {
-        const rightWidth = rect.width - orientation.width - this.kerf;
-        const bottomHeight = rect.height - orientation.height - this.kerf;
-        const freeRects = [];
-        const cutDetails = [];
-
-        if (splitMode === 'H_SPLIT') {
-            if (rightWidth > 0) {
-                freeRects.push({
-                    x: rect.x + orientation.width + this.kerf,
-                    y: rect.y,
-                    width: rightWidth,
-                    height: orientation.height
-                });
-                cutDetails.push(this.createAreaTargetCutDetail(
-                    'X',
-                    rect.x + orientation.width,
-                    rect.y,
-                    rect.y + orientation.height,
-                    rect
-                ));
-            }
-            if (bottomHeight > 0) {
-                freeRects.push({
-                    x: rect.x,
-                    y: rect.y + orientation.height + this.kerf,
-                    width: rect.width,
-                    height: bottomHeight
-                });
-                cutDetails.push(this.createAreaTargetCutDetail(
-                    'Y',
-                    rect.y + orientation.height,
-                    rect.x,
-                    rect.x + rect.width,
-                    rect
-                ));
-            }
-        } else {
-            if (rightWidth > 0) {
-                freeRects.push({
-                    x: rect.x + orientation.width + this.kerf,
-                    y: rect.y,
-                    width: rightWidth,
-                    height: rect.height
-                });
-                cutDetails.push(this.createAreaTargetCutDetail(
-                    'X',
-                    rect.x + orientation.width,
-                    rect.y,
-                    rect.y + rect.height,
-                    rect
-                ));
-            }
-            if (bottomHeight > 0) {
-                freeRects.push({
-                    x: rect.x,
-                    y: rect.y + orientation.height + this.kerf,
-                    width: orientation.width,
-                    height: bottomHeight
-                });
-                cutDetails.push(this.createAreaTargetCutDetail(
-                    'Y',
-                    rect.y + orientation.height,
-                    rect.x,
-                    rect.x + orientation.width,
-                    rect
-                ));
-            }
-        }
-
-        return { freeRects, cutDetails };
-    }
-
-    createAreaTargetCutDetail(axis, pos, spanStart, spanEnd, sourceRect) {
-        const length = Math.max(0, spanEnd - spanStart);
-        const fullSpan = axis === 'X'
-            ? spanStart === 0 && spanEnd === this.binHeight
-            : spanStart === 0 && spanEnd === this.binWidth;
-        const relativePos = axis === 'X'
-            ? pos - sourceRect.x
-            : pos - sourceRect.y;
-        const sourceSize = axis === 'X' ? sourceRect.width : sourceRect.height;
-        const firstPiece = Math.max(0, relativePos);
-        const secondPiece = Math.max(0, sourceSize - relativePos - this.kerf);
-
-        return {
-            axis,
-            pos,
-            spanStart,
-            spanEnd,
-            length,
-            fullSpan,
-            sourceRect: {
-                x: sourceRect.x,
-                y: sourceRect.y,
-                width: sourceRect.width,
-                height: sourceRect.height
-            },
-            pieceWidthsAfterCut: [firstPiece, secondPiece]
-        };
-    }
-
-    normalizeAreaTargetFreeRects(rects) {
-        return rects
-            .filter(rect => rect.width > 0 && rect.height > 0)
-            .sort((a, b) => (b.width * b.height) - (a.width * a.height) || a.y - b.y || a.x - b.x);
-    }
-
-    scoreAreaTargetState(state) {
-        const usedBins = state.bins.filter(bin => bin.placed.length > 0).length;
-        const freeRectCount = state.bins.reduce((sum, bin) => sum + bin.freeRects.length, 0);
-        const sliverPenalty = state.bins.reduce((sum, bin) =>
-            sum + bin.freeRects.reduce((rectSum, rect) => {
-                const minSide = Math.min(rect.width, rect.height);
-                return rectSum + (minSide < 60 ? 1 : 0);
-            }, 0), 0);
-
-        return (state.usedArea * 1000) - (usedBins * 100000) - (state.cutCount * 100) - (freeRectCount * 25) - (sliverPenalty * 250);
-    }
-
-    compareAreaTargetFinalStates(a, b) {
-        const usedBinsA = a.bins.filter(bin => bin.placed.length > 0).length;
-        const usedBinsB = b.bins.filter(bin => bin.placed.length > 0).length;
-        if (usedBinsA !== usedBinsB) return usedBinsA - usedBinsB;
-        if (a.cutCount !== b.cutCount) return a.cutCount - b.cutCount;
-        return b.usedArea - a.usedArea;
-    }
-
-    materializeAreaTargetBin(bin) {
-        const usedArea = bin.placed.reduce((sum, part) => sum + (part.width * part.height), 0);
-        const totalArea = this.binWidth * this.binHeight;
-        const cutDetails = this.dedupeCutDetails(this.filterAreaTargetCutDetailsByPlaced(bin.cutDetails || [], bin.placed));
-        return {
-            width: this.binWidth,
-            height: this.binHeight,
-            placed: bin.placed,
-            unplaced: [],
-            freeRects: bin.freeRects,
-            efficiency: totalArea > 0 ? (usedArea / totalArea) * 100 : 0,
-            usedArea,
-            totalArea,
-            cuttingCount: cutDetails.length,
-            firstCutDirection: 'HYBRID',
-            cutDetails
-        };
-    }
-
-    dedupeCutDetails(cutDetails) {
-        const map = new Map();
-        (cutDetails || []).forEach(detail => {
-            const key = [detail.axis, detail.pos, detail.spanStart, detail.spanEnd].join(':');
-            if (!map.has(key)) {
-                map.set(key, detail);
-            }
-        });
-        return Array.from(map.values());
-    }
-
-    filterAreaTargetCutDetailsByPlaced(cutDetails, placed) {
-        if (!Array.isArray(cutDetails) || !Array.isArray(placed)) {
-            return [];
-        }
-
-        return cutDetails.filter(cut => {
-            const pos = Math.round(cut.pos);
-            return placed.some(part => {
-                if (cut.axis === 'Y') {
-                    const edgeTop = Math.round(part.y);
-                    const edgeBottom = Math.round(part.y + part.height);
-                    const overlaps = cut.spanEnd > part.x && cut.spanStart < part.x + part.width;
-                    return overlaps && (pos === edgeTop || pos === edgeBottom);
-                }
-
-                const edgeLeft = Math.round(part.x);
-                const edgeRight = Math.round(part.x + part.width);
-                const overlaps = cut.spanEnd > part.y && cut.spanStart < part.y + part.height;
-                return overlaps && (pos === edgeLeft || pos === edgeRight);
-            });
-        });
-    }
-
     isValidPackingResult(result) {
         if (!result || !Array.isArray(result.bins)) return false;
         return result.bins.every(bin => this.isValidBinPlacement(bin));
@@ -1055,7 +634,7 @@ class GuillotinePacker {
 
         // 회전 가능한 부품은 높이 작게 정규화 (스트립 효율을 위해)
         expandedItems.forEach(item => {
-            if (item.allowRotate && item.width < item.height) {
+            if (item.rotatable && item.width < item.height) {
                 [item.width, item.height] = [item.height, item.width];
                 item.rotated = !item.rotated;
             }
@@ -1136,7 +715,7 @@ class GuillotinePacker {
                 let rotated = false;
 
                 // normalizeHeight: Strip용 - 높이 작게 정규화
-                if (normalizeHeight && item.allowRotate && w < h) {
+                if (normalizeHeight && item.rotatable && w < h) {
                     [w, h] = [h, w];
                     rotated = true;
                 }
@@ -1148,7 +727,7 @@ class GuillotinePacker {
                     originalId: idx,
                     originalWidth: item.width,
                     originalHeight: item.height,
-                    allowRotate: item.allowRotate !== false,
+                    rotatable: item.rotatable !== false,
                     rotated: rotated
                 });
             }
@@ -1614,7 +1193,7 @@ class AdaptiveGuillotineBin {
         // 1. rect에 들어갈 수 있는 부품 필터
         const fittable = items.filter(item => {
             if (item.height <= rect.height && item.width <= rect.width) return true;
-            if (item.allowRotate && item.width <= rect.height && item.height <= rect.width) return true;
+            if (item.rotatable && item.width <= rect.height && item.height <= rect.width) return true;
             return false;
         });
 
@@ -1630,7 +1209,7 @@ class AdaptiveGuillotineBin {
                 heightCandidates.add(item.height);
             }
             // 회전 방향 (회전 시 height가 더 작아지는 경우만)
-            if (item.allowRotate &&
+            if (item.rotatable &&
                 item.width < item.height &&
                 item.width <= rect.height &&
                 item.height <= rect.width) {
@@ -1645,13 +1224,13 @@ class AdaptiveGuillotineBin {
             for (const h of heightCandidates) {
                 const canFit = fittable.filter(item =>
                     (item.height <= h && item.width <= rect.width) ||
-                    (item.allowRotate && item.width <= h && item.height <= rect.width)
+                    (item.rotatable && item.width <= h && item.height <= rect.width)
                 );
                 if (canFit.length === 0) continue;
                 // 가장 큰 부품이 이 높이에 들어가는지 확인
                 const largest = canFit[0];
                 const fitsNormal = largest.height <= h && largest.width <= rect.width;
-                const fitsRotated = largest.allowRotate && largest.width <= h && largest.height <= rect.width;
+                const fitsRotated = largest.rotatable && largest.width <= h && largest.height <= rect.width;
                 if (!fitsNormal && !fitsRotated) continue;
                 const waste = rect.height - h;
                 if (waste < minWaste) {
@@ -1666,7 +1245,7 @@ class AdaptiveGuillotineBin {
         }
 
         // 나머지 부품이 스트립에 못 들어가면 가로 배치 전환
-        if (fittable.length === 1 && fittable[0].allowRotate) {
+        if (fittable.length === 1 && fittable[0].rotatable) {
             const item = fittable[0];
             // 가로(길이) 배치: 긴 치수를 width(길이방향)으로
             const longDim = Math.max(item.width, item.height);
@@ -1736,7 +1315,7 @@ class AdaptiveGuillotineBin {
         for (const item of stripItems) {
             if (placedIds.has(item.id)) continue;
             let w = item.width, h = item.height, rotated = false;
-            if (h > bestHeight && item.allowRotate && item.width <= bestHeight) {
+            if (h > bestHeight && item.rotatable && item.width <= bestHeight) {
                 w = item.height; h = item.width; rotated = true;
             }
             if (h > bestHeight) continue;
@@ -1914,7 +1493,7 @@ class AdaptiveGuillotineBin {
                     height: item.height,
                     rotated: item.rotated
                 });
-            } else if (item.allowRotate && item.width === stripHeight && item.height <= rect.width) {
+            } else if (item.rotatable && item.width === stripHeight && item.height <= rect.width) {
                 oriented.push({
                     item,
                     width: item.height,
@@ -2008,7 +1587,7 @@ class AdaptiveGuillotineBin {
                     height: item.height,
                     rotated: item.rotated
                 });
-            } else if (item.allowRotate && item.height === stripWidth && item.width <= rect.height) {
+            } else if (item.rotatable && item.height === stripWidth && item.width <= rect.height) {
                 oriented.push({
                     item,
                     width: item.height,
@@ -2129,501 +1708,6 @@ class AdaptiveGuillotineBin {
         });
     }
 
-    generateCutCandidates(parts, boardW, boardH, considerGrain) {
-        const maxPerAxis = 12;
-        if (!Array.isArray(parts) || parts.length === 0) {
-            return [];
-        }
-
-        const axisMap = {
-            V: { limit: boardW, values: new Map() },
-            H: { limit: boardH, values: new Map() }
-        };
-
-        const addCandidate = (axis, pos, layer, weight = 1) => {
-            if (!Number.isFinite(pos) || pos <= 0) return;
-            const roundedPos = Math.round(pos * 1000) / 1000;
-            const bucket = axisMap[axis];
-            if (!bucket || roundedPos >= bucket.limit) return;
-
-            const existing = bucket.values.get(roundedPos);
-            if (!existing) {
-                bucket.values.set(roundedPos, { axis, pos: roundedPos, layer, weight });
-                return;
-            }
-
-            if (layer < existing.layer || (layer === existing.layer && weight > existing.weight)) {
-                bucket.values.set(roundedPos, { axis, pos: roundedPos, layer, weight });
-            }
-        };
-
-        const orientedParts = parts.map(part => {
-            const qty = Math.max(1, parseInt(part.qty, 10) || 1);
-            const allowRotate = !!(part.allowRotate && !considerGrain);
-            return {
-                width: part.width,
-                height: part.height,
-                qty,
-                allowRotate
-            };
-        });
-
-        const widthFreq = new Map();
-        const heightFreq = new Map();
-        const registerFreq = (map, value, qty) => {
-            if (!Number.isFinite(value) || value <= 0) return;
-            map.set(value, (map.get(value) || 0) + qty);
-        };
-
-        orientedParts.forEach(part => {
-            registerFreq(widthFreq, part.width, part.qty);
-            registerFreq(heightFreq, part.height, part.qty);
-            if (part.allowRotate) {
-                registerFreq(widthFreq, part.height, part.qty);
-                registerFreq(heightFreq, part.width, part.qty);
-            }
-        });
-
-        // Layer 1: 단일 치수
-        orientedParts.forEach(part => {
-            addCandidate('V', part.width, 1, part.qty);
-            addCandidate('H', part.height, 1, part.qty);
-        });
-
-        // Layer 2: 회전 치수
-        orientedParts.forEach(part => {
-            if (!part.allowRotate) return;
-            addCandidate('V', part.height, 2, part.qty);
-            addCandidate('H', part.width, 2, part.qty);
-        });
-
-        // Layer 3: 동일 부품 합산 (최대 4개)
-        orientedParts.forEach(part => {
-            const maxRepeat = Math.min(part.qty, 4);
-            for (let count = 2; count <= maxRepeat; count++) {
-                addCandidate('V', part.width * count, 3, maxRepeat - count + 1);
-                addCandidate('H', part.height * count, 3, maxRepeat - count + 1);
-                if (part.allowRotate) {
-                    addCandidate('V', part.height * count, 3, maxRepeat - count + 1);
-                    addCandidate('H', part.width * count, 3, maxRepeat - count + 1);
-                }
-            }
-        });
-
-        // Layer 4: micro-group heuristic
-        const topWidths = Array.from(widthFreq.entries())
-            .sort((a, b) => b[1] - a[1] || a[0] - b[0])
-            .slice(0, 6)
-            .map(([value, freq]) => ({ value, freq }));
-        const topHeights = Array.from(heightFreq.entries())
-            .sort((a, b) => b[1] - a[1] || a[0] - b[0])
-            .slice(0, 6)
-            .map(([value, freq]) => ({ value, freq }));
-
-        const addMicroGroups = (axis, dims, limit) => {
-            for (let i = 0; i < dims.length; i++) {
-                for (let j = i; j < dims.length; j++) {
-                    const sum2 = dims[i].value + dims[j].value;
-                    addCandidate(axis, sum2, 4, dims[i].freq + dims[j].freq);
-
-                    for (let k = j; k < dims.length; k++) {
-                        const sum3 = sum2 + dims[k].value;
-                        if (sum3 < limit) {
-                            addCandidate(axis, sum3, 4, dims[i].freq + dims[j].freq + dims[k].freq);
-                        }
-                    }
-                }
-            }
-        };
-
-        addMicroGroups('V', topWidths, boardW);
-        addMicroGroups('H', topHeights, boardH);
-
-        const selectTop = axis => Array.from(axisMap[axis].values.values())
-            .sort((a, b) =>
-                a.layer - b.layer ||
-                b.weight - a.weight ||
-                b.pos - a.pos
-            )
-            .slice(0, maxPerAxis)
-            .sort((a, b) => a.pos - b.pos)
-            .map(({ axis, pos }) => ({ axis, pos }));
-
-        return [
-            ...selectTop('V'),
-            ...selectTop('H')
-        ];
-    }
-
-    guillotinePartitionPlanner(parts, boardW, boardH, considerGrain) {
-        const MAX_RECURSION_DEPTH = 4;
-        const beamWidth = 4;
-        const cutCandidates = 12;
-        const nodeBudgetPerBoard = 500;
-        const hardTimeoutMs = 1000;
-        const startedAt = Date.now();
-        const helper = new AdaptiveGuillotineBin(boardW, boardH, this.kerf);
-
-        const normalizeParts = () => {
-            const boardLongIsX = boardW >= boardH;
-            return parts.map(part => {
-                const allowRotate = !!(part.allowRotate && !considerGrain);
-                const width = considerGrain
-                    ? (boardLongIsX ? Math.max(part.width, part.height) : Math.min(part.width, part.height))
-                    : part.width;
-                const height = considerGrain
-                    ? (boardLongIsX ? Math.min(part.width, part.height) : Math.max(part.width, part.height))
-                    : part.height;
-                return {
-                    width,
-                    height,
-                    qty: part.qty,
-                    allowRotate
-                };
-            });
-        };
-
-        const normalizedParts = normalizeParts();
-        const expandedItems = this.expandItems(normalizedParts, false);
-        const baseline = this.packAdaptiveBase(expandedItems);
-        const boardArea = boardW * boardH;
-        const totalArea = expandedItems.reduce((sum, item) => sum + (item.width * item.height), 0);
-        const targetBinCount = Math.max(1, Math.ceil(totalArea / boardArea));
-
-        const itemArea = item => item.width * item.height;
-        const rectArea = rect => Math.max(0, rect.width) * Math.max(0, rect.height);
-        const remainingArea = items => items.reduce((sum, item) => sum + itemArea(item), 0);
-        const timeExceeded = () => Date.now() - startedAt > hardTimeoutMs;
-
-        const createCutDetail = (axis, pos, spanStart, spanEnd, sourceRect) => {
-            const length = Math.max(0, spanEnd - spanStart);
-            const fullSpan = axis === 'X'
-                ? spanStart === 0 && spanEnd === boardH
-                : spanStart === 0 && spanEnd === boardW;
-            const relativePos = axis === 'X' ? pos - sourceRect.x : pos - sourceRect.y;
-            const sourceSize = axis === 'X' ? sourceRect.width : sourceRect.height;
-            const firstPiece = Math.max(0, relativePos);
-            const secondPiece = Math.max(0, sourceSize - relativePos - this.kerf);
-            return {
-                axis,
-                pos,
-                spanStart,
-                spanEnd,
-                length,
-                fullSpan,
-                sourceRect: {
-                    x: sourceRect.x,
-                    y: sourceRect.y,
-                    width: sourceRect.width,
-                    height: sourceRect.height
-                },
-                pieceWidthsAfterCut: [firstPiece, secondPiece]
-            };
-        };
-
-        const splitRect = (rect, candidate) => {
-            if (candidate.axis === 'V') {
-                const leftWidth = candidate.pos;
-                const rightWidth = rect.width - candidate.pos - this.kerf;
-                if (leftWidth <= 0 || rightWidth <= 0) return null;
-                return {
-                    first: { x: rect.x, y: rect.y, width: leftWidth, height: rect.height },
-                    second: { x: rect.x + candidate.pos + this.kerf, y: rect.y, width: rightWidth, height: rect.height },
-                    cutDetail: createCutDetail('X', rect.x + candidate.pos, rect.y, rect.y + rect.height, rect)
-                };
-            }
-
-            const topHeight = candidate.pos;
-            const bottomHeight = rect.height - candidate.pos - this.kerf;
-            if (topHeight <= 0 || bottomHeight <= 0) return null;
-            return {
-                first: { x: rect.x, y: rect.y, width: rect.width, height: topHeight },
-                second: { x: rect.x, y: rect.y + candidate.pos + this.kerf, width: rect.width, height: bottomHeight },
-                cutDetail: createCutDetail('Y', rect.y + candidate.pos, rect.x, rect.x + rect.width, rect)
-            };
-        };
-
-        const collapseItems = items => {
-            const map = new Map();
-            items.forEach(item => {
-                const key = [item.width, item.height, item.allowRotate ? 1 : 0].join(':');
-                const existing = map.get(key);
-                if (existing) {
-                    existing.qty += 1;
-                } else {
-                    map.set(key, {
-                        width: item.width,
-                        height: item.height,
-                        qty: 1,
-                        allowRotate: !!item.allowRotate
-                    });
-                }
-            });
-            return Array.from(map.values());
-        };
-
-        const dedupeCutDetails = cutDetails => {
-            const map = new Map();
-            (cutDetails || []).forEach(detail => {
-                const key = [detail.axis, detail.pos, detail.spanStart, detail.spanEnd].join(':');
-                if (!map.has(key)) map.set(key, detail);
-            });
-            return Array.from(map.values());
-        };
-
-        const materializeBin = boardResult => {
-            const usedArea = boardResult.placed.reduce((sum, item) => sum + itemArea(item), 0);
-            const filteredCuts = dedupeCutDetails(helper.filterCutDetailsByPlaced(boardResult.cutDetails || [], boardResult.placed));
-            return {
-                width: boardW,
-                height: boardH,
-                placed: boardResult.placed,
-                unplaced: boardResult.remaining,
-                freeRects: boardResult.freeRects || [],
-                efficiency: boardArea > 0 ? (usedArea / boardArea) * 100 : 0,
-                usedArea,
-                totalArea: boardArea,
-                cuttingCount: filteredCuts.length,
-                firstCutDirection: 'GPP',
-                cutDetails: filteredCuts
-            };
-        };
-
-        const useFallbackRect = rectItems => {
-            const rect = rectItems.rect;
-            const items = rectItems.items;
-            const result = helper.guillotineCutB(rect, items);
-            return {
-                success: false,
-                placed: result.placed || [],
-                remaining: result.unplaced || [],
-                freeRects: result.freeRects || [],
-                cutDetails: result.cutDetails || [],
-                fallback: true
-            };
-        };
-
-        const memo = new Map();
-        let visitedStates = 0;
-
-        const solveRect = (rect, items, depth) => {
-            visitedStates += 1;
-
-            if (depth >= MAX_RECURSION_DEPTH) {
-                return useFallbackRect({ rect, items });
-            }
-            if (timeExceeded()) {
-                return useFallbackRect({ rect, items });
-            }
-            if (visitedStates > nodeBudgetPerBoard) {
-                return useFallbackRect({ rect, items });
-            }
-            if (!items || items.length === 0) {
-                return {
-                    success: true,
-                    placed: [],
-                    remaining: [],
-                    freeRects: [rect],
-                    cutDetails: []
-                };
-            }
-
-            const fittable = items.filter(item => {
-                const normalFit = item.width <= rect.width && item.height <= rect.height;
-                const rotatedFit = item.allowRotate && item.height <= rect.width && item.width <= rect.height;
-                return normalFit || rotatedFit;
-            });
-
-            if (fittable.length === 0) {
-                return {
-                    success: false,
-                    placed: [],
-                    remaining: items,
-                    freeRects: [rect],
-                    cutDetails: []
-                };
-            }
-
-            if (remainingArea(items) > rectArea(rect)) {
-                return {
-                    success: false,
-                    placed: [],
-                    remaining: items,
-                    freeRects: [rect],
-                    cutDetails: []
-                };
-            }
-
-            const memoKey = [
-                depth,
-                Math.round(rect.width * 1000) / 1000,
-                Math.round(rect.height * 1000) / 1000,
-                items.map(item => item.id).sort().join(',')
-            ].join('|');
-            if (memo.has(memoKey)) {
-                return memo.get(memoKey);
-            }
-
-            if (items.length === 1) {
-                const item = items[0];
-                if (item.width <= rect.width && item.height <= rect.height) {
-                    const single = {
-                        success: true,
-                        placed: [{ ...item, x: rect.x, y: rect.y, rotated: !!item.rotated }],
-                        remaining: [],
-                        freeRects: [],
-                        cutDetails: []
-                    };
-                    memo.set(memoKey, single);
-                    return single;
-                }
-                if (item.allowRotate && item.height <= rect.width && item.width <= rect.height) {
-                    const singleRotated = {
-                        success: true,
-                        placed: [{
-                            ...item,
-                            x: rect.x,
-                            y: rect.y,
-                            width: item.height,
-                            height: item.width,
-                            rotated: !item.rotated
-                        }],
-                        remaining: [],
-                        freeRects: [],
-                        cutDetails: []
-                    };
-                    memo.set(memoKey, singleRotated);
-                    return singleRotated;
-                }
-            }
-
-            const candidates = this.generateCutCandidates(collapseItems(items), rect.width, rect.height, considerGrain)
-                .filter(candidate =>
-                    (candidate.axis === 'V' && candidate.pos > 0 && candidate.pos < rect.width) ||
-                    (candidate.axis === 'H' && candidate.pos > 0 && candidate.pos < rect.height)
-                )
-                .slice(0, cutCandidates * 2);
-
-            if (candidates.length === 0) {
-                return {
-                    success: false,
-                    placed: [],
-                    remaining: items,
-                    freeRects: [rect],
-                    cutDetails: []
-                };
-            }
-
-            const allMask = (1 << items.length) - 1;
-            const attempts = [];
-
-            candidates.forEach(candidate => {
-                const split = splitRect(rect, candidate);
-                if (!split) return;
-
-                for (let submask = 1; submask < allMask; submask++) {
-                    const leftItems = [];
-                    const rightItems = [];
-                    for (let i = 0; i < items.length; i++) {
-                        if ((submask & (1 << i)) !== 0) {
-                            leftItems.push(items[i]);
-                        } else {
-                            rightItems.push(items[i]);
-                        }
-                    }
-
-                    if (remainingArea(leftItems) > rectArea(split.first) || remainingArea(rightItems) > rectArea(split.second)) {
-                        continue;
-                    }
-
-                    const fillScore = Math.min(rectArea(split.first), remainingArea(leftItems)) +
-                        Math.min(rectArea(split.second), remainingArea(rightItems));
-                    attempts.push({
-                        candidate,
-                        split,
-                        leftItems,
-                        rightItems,
-                        score: fillScore
-                    });
-                }
-            });
-
-            attempts.sort((a, b) => b.score - a.score);
-            const beamAttempts = attempts.slice(0, beamWidth);
-
-            let best = null;
-            beamAttempts.forEach(attempt => {
-                const first = solveRect(attempt.split.first, attempt.leftItems, depth + 1);
-                const second = solveRect(attempt.split.second, first.remaining.length === 0 ? attempt.rightItems : attempt.rightItems, depth + 1);
-
-                const combinedPlaced = [...(first.placed || []), ...(second.placed || [])];
-                const combinedRemaining = [...(first.remaining || []), ...(second.remaining || [])];
-                const combinedCuts = [attempt.split.cutDetail, ...(first.cutDetails || []), ...(second.cutDetails || [])];
-                const success = combinedRemaining.length === 0;
-                const candidateResult = {
-                    success,
-                    placed: combinedPlaced,
-                    remaining: combinedRemaining,
-                    freeRects: [...(first.freeRects || []), ...(second.freeRects || [])],
-                    cutDetails: combinedCuts
-                };
-
-                if (!best) {
-                    best = candidateResult;
-                    return;
-                }
-
-                if (candidateResult.remaining.length < best.remaining.length) {
-                    best = candidateResult;
-                    return;
-                }
-
-                if (candidateResult.remaining.length === best.remaining.length &&
-                    candidateResult.placed.length > best.placed.length) {
-                    best = candidateResult;
-                }
-            });
-
-            if (!best) {
-                best = useFallbackRect({ rect, items });
-            }
-
-            memo.set(memoKey, best);
-            return best;
-        };
-
-        let remaining = [...expandedItems];
-        const bins = [];
-        for (let boardIndex = 0; boardIndex < targetBinCount && remaining.length > 0; boardIndex++) {
-            const boardResult = solveRect({ x: 0, y: 0, width: boardW, height: boardH }, remaining, 0);
-            if (!boardResult.placed || boardResult.placed.length === 0) {
-                break;
-            }
-
-            bins.push(materializeBin(boardResult));
-            const placedIds = new Set(boardResult.placed.map(item => item.id));
-            remaining = remaining.filter(item => !placedIds.has(item.id));
-        }
-
-        const candidate = {
-            bins,
-            unplaced: remaining,
-            totalEfficiency: this.calculateTotalEfficiency(bins),
-            engine: 'guillotine-partition-planner'
-        };
-
-        if (candidate.unplaced.length === 0 && candidate.bins.length < baseline.bins.length) {
-            return candidate;
-        }
-
-        return {
-            bins: baseline.bins,
-            unplaced: baseline.unplaced,
-            totalEfficiency: this.calculateTotalEfficiency(baseline.bins),
-            engine: baseline.engine || 'baseline'
-        };
-    }
-
     collectStripSizes(items, maxPrimarySize, crossSize, direction) {
         const sizes = new Set();
 
@@ -2632,14 +1716,14 @@ class AdaptiveGuillotineBin {
                 if (item.height <= maxPrimarySize && item.width <= crossSize) {
                     sizes.add(item.height);
                 }
-                if (item.allowRotate && item.width <= maxPrimarySize && item.height <= crossSize) {
+                if (item.rotatable && item.width <= maxPrimarySize && item.height <= crossSize) {
                     sizes.add(item.width);
                 }
             } else {
                 if (item.width <= maxPrimarySize && item.height <= crossSize) {
                     sizes.add(item.width);
                 }
-                if (item.allowRotate && item.height <= maxPrimarySize && item.width <= crossSize) {
+                if (item.rotatable && item.height <= maxPrimarySize && item.width <= crossSize) {
                     sizes.add(item.height);
                 }
             }
@@ -2651,7 +1735,7 @@ class AdaptiveGuillotineBin {
     canFitAny(rect, items) {
         return items.some(item => {
             const normalFit = item.width <= rect.width && item.height <= rect.height;
-            const rotatedFit = item.allowRotate && item.height <= rect.width && item.width <= rect.height;
+            const rotatedFit = item.rotatable && item.height <= rect.width && item.width <= rect.height;
             return normalFit || rotatedFit;
         });
     }
@@ -2738,7 +1822,7 @@ class WidthStripBin {
         const widthGroups = {};
         items.forEach(original => {
             const item = { ...original };
-            if (item.allowRotate) {
+            if (item.rotatable) {
                 const fits = item.width <= this.width && item.height <= this.height;
                 const fitsRotated = item.height <= this.width && item.width <= this.height;
                 if (!fits && fitsRotated) {
@@ -2891,7 +1975,7 @@ class WidthStripBin {
             for (let i = 0; i < remaining.length; i++) {
                 const item = remaining[i];
                 const orientations = [{ w: item.width, h: item.height, rotated: false }];
-                if (item.allowRotate) {
+                if (item.rotatable) {
                     orientations.push({ w: item.height, h: item.width, rotated: true });
                 }
 
@@ -3037,7 +2121,7 @@ class RipReapplyBin {
 
         // 2) 회전 가능한 부품을 회전시킨 복사본 생성
         const rotatedItems = items.map(item => {
-            if (item.allowRotate && item.width !== item.height) {
+            if (item.rotatable && item.width !== item.height) {
                 return {
                     ...item,
                     width: item.height,
@@ -3072,7 +2156,7 @@ class RipReapplyBin {
 
         items.forEach(original => {
             const item = { ...original };
-            if (item.allowRotate) {
+            if (item.rotatable) {
                 const fits = item.width <= rect.width && item.height <= rect.height;
                 const fitsRotated = item.height <= rect.width && item.width <= rect.height;
                 if (!fits && fitsRotated) {
@@ -3259,7 +2343,7 @@ class RipReapplyBin {
 
         items.forEach(original => {
             const item = { ...original };
-            if (item.allowRotate) {
+            if (item.rotatable) {
                 const fits = item.width <= rect.width && item.height <= rect.height;
                 const fitsRotated = item.height <= rect.width && item.width <= rect.height;
                 if (!fits && fitsRotated) {
@@ -3526,7 +2610,7 @@ class BandSingleModeBin {
             if (item.height <= availableHeight) {
                 heights.add(item.height);
             }
-            if (item.allowRotate && item.width <= availableHeight) {
+            if (item.rotatable && item.width <= availableHeight) {
                 heights.add(item.width);
             }
         });
@@ -3655,7 +2739,7 @@ class BandSingleModeBin {
                 oriented.push({ item, width: item.width, height: item.height, isRotated: false });
                 continue;
             }
-            if (item.allowRotate && item.width === height) {
+            if (item.rotatable && item.width === height) {
                 oriented.push({ item, width: item.height, height: item.width, isRotated: true });
             }
         }
@@ -4091,9 +3175,6 @@ class StripEfficiencyBin {
         };
     }
 }
-
-GuillotinePacker.prototype.generateCutCandidates = AdaptiveGuillotineBin.prototype.generateCutCandidates;
-GuillotinePacker.prototype.guillotinePartitionPlanner = AdaptiveGuillotineBin.prototype.guillotinePartitionPlanner;
 
 // 전역 노출
 window.GuillotinePacker = GuillotinePacker;
