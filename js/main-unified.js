@@ -317,7 +317,7 @@ class WoodcutterApp {
         const width = parseFloat(partWidthEl.value);
         const height = parseFloat(partHeightEl.value);
         const qty = parseInt(partQtyEl.value) || 1;
-        const allowRotate = partRotatableEl ? partRotatableEl.checked : true;
+        const rotatable = partRotatableEl ? partRotatableEl.checked : true;
 
         // 최솟값(10mm) 및 숫자 여부만 체크 — 판재 상한 체크는 계산 시 수행
         let hasError = false;
@@ -346,7 +346,7 @@ class WoodcutterApp {
 
         if (hasError) return;
 
-        this.state.addPart({ width, height, qty, allowRotate });
+        this.state.addPart({ width, height, qty, rotatable, allowRotate: rotatable });
 
         partWidthEl.value = '';
         partHeightEl.value = '';
