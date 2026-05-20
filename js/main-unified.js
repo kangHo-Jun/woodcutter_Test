@@ -561,6 +561,7 @@ class WoodcutterApp {
                     ? (boardLongIsX ? Math.min(part.width, part.height) : Math.max(part.width, part.height))
                     : (!part.allowRotate ? part.width : part.height);
                 return {
+                    id: part.id,
                     width: pw,
                     height: ph,
                     qty: part.qty,

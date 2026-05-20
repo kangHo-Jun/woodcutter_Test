@@ -74,7 +74,8 @@ class GuillotinePacker {
         console.info(`[ENGINE] auto wrapper selected: ${engine}`);
     }
 
-    packAdaptiveAuto(items) {
+    packAdaptiveAuto(items, options = {}) {
+        const disableGroupSplit = options.disableGroupSplit === true;
         const expandedItems = this.expandItems(items, false);
 
         // 알고리즘A 실행
@@ -197,6 +198,17 @@ class GuillotinePacker {
             selectedUnplaced = skinnyAnchorCandidate.unplaced;
             selectedEngine = 'SKINNY_ANCHOR';
         }
+
+        if (!disableGroupSplit) {
+            const groupSplitCandidate = this.buildGroupSplit2BinCandidate(items);
+            if (this.isValidPackingResult(groupSplitCandidate) &&
+                groupSplitCandidate.unplaced.length === 0 &&
+                groupSplitCandidate.bins.length < selectedBins.length) {
+                selectedBins = groupSplitCandidate.bins;
+                selectedUnplaced = groupSplitCandidate.unplaced;
+                selectedEngine = 'GROUP_SPLIT_2BIN';
+            }
+        }
         console.log(`[ALGO] A판재:${binsA.length} B판재:${binsB.length} 선택:${selectedEngine}`);
 
         return {
@@ -211,6 +223,60 @@ class GuillotinePacker {
     getCurrentConsiderGrain() {
         if (typeof window === 'undefined') return false;
         return !!window.app?.state?.boardSpec?.considerGrain;
+    }
+
+    buildGroupSplit2BinCandidate(items) {
+        if (!Array.isArray(items) || items.length < 2) return null;
+
+        const groups = new Map();
+        items.forEach(item => {
+            if (!item || item.id == null) return;
+            const key = String(item.id);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push({
+                ...item,
+                allowRotate: item.allowRotate !== false
+            });
+        });
+
+        if (groups.size < 2) return null;
+
+        const groupedEntries = Array.from(groups.entries()).map(([key, groupItems]) => ({
+            key,
+            items: groupItems,
+            area: groupItems.reduce((sum, item) => sum + (item.width * item.height * item.qty), 0)
+        })).sort((a, b) => b.area - a.area);
+
+        // 3개 이상 그룹은 조합 폭발 방지를 위해 현재 후보에서 제외한다.
+        if (groupedEntries.length !== 2) {
+            return null;
+        }
+
+        const soloResults = groupedEntries.map(entry => ({
+            key: entry.key,
+            result: this.packAdaptiveAuto(entry.items, { disableGroupSplit: true })
+        }));
+
+        const allSingleBoard = soloResults.every(({ result }) =>
+            this.isValidPackingResult(result) &&
+            Array.isArray(result.unplaced) &&
+            result.unplaced.length === 0 &&
+            Array.isArray(result.bins) &&
+            result.bins.length === 1
+        );
+
+        if (!allSingleBoard) {
+            return null;
+        }
+
+        const bins = soloResults.flatMap(({ result }) => result.bins.map(bin => this.cloneBin(bin)));
+        return {
+            bins,
+            unplaced: [],
+            totalEfficiency: this.calculateTotalEfficiency(bins),
+            mode: 'auto',
+            engine: 'GROUP_SPLIT_2BIN'
+        };
     }
 
     buildSkinnyAnchorCandidate(items) {
