@@ -12,7 +12,7 @@ class SettingsManager {
     static DEFAULT_SETTINGS = {
         kerf: 4.2,
         enableTrim: false,
-        trimMargin: 5,
+        trimMargin: 9,
         cutDirection: 'auto',
         cutMethod: 'guillotine',
         optimizationPriority: 'material',
@@ -73,8 +73,8 @@ class SettingsManager {
             ? settings.enableTrim
             : this.DEFAULT_SETTINGS.enableTrim;
 
-        // 트리밍 여백
-        validated.trimMargin = this.validateNumber(settings.trimMargin, 0, 50, this.DEFAULT_SETTINGS.trimMargin);
+        // 트리밍 여백 - 항상 기본값 9 사용 (페이지 새로고침시 초기화)
+        validated.trimMargin = this.DEFAULT_SETTINGS.trimMargin;
 
         // 절단 방향
         const validDirections = ['horizontal', 'vertical', 'auto'];
