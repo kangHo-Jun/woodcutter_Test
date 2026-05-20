@@ -346,7 +346,8 @@ class WoodcutterApp {
 
         if (hasError) return;
 
-        this.state.addPart({ width, height, qty, rotatable, allowRotate: rotatable });
+        const id = String.fromCharCode(65 + this.state.cuttingList.length);
+        this.state.addPart({ id, width, height, qty, rotatable, allowRotate: rotatable });
 
         partWidthEl.value = '';
         partHeightEl.value = '';
