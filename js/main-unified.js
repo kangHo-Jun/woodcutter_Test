@@ -1329,6 +1329,63 @@ class WoodcutterApp {
     }
 
     /**
+     * 부품 범례를 폭과 최대 줄 수에 맞게 분할
+     * 최대 줄 수를 넘는 항목은 마지막 줄의 "외 N종"으로 축약한다.
+     */
+    wrapPartsLegend(ctx, entries, maxWidth, maxLines, separator = '  ') {
+        if (!entries || entries.length === 0 || maxLines <= 0) {
+            return { lines: [], hiddenCount: 0 };
+        }
+
+        const lines = [];
+        let currentEntries = [];
+        let nextEntryIndex = 0;
+
+        while (nextEntryIndex < entries.length && lines.length < maxLines) {
+            const entry = entries[nextEntryIndex];
+            const candidateEntries = [...currentEntries, entry];
+            const candidateText = candidateEntries.join(separator);
+
+            if (currentEntries.length === 0 || ctx.measureText(candidateText).width <= maxWidth) {
+                currentEntries = candidateEntries;
+                nextEntryIndex++;
+                continue;
+            }
+
+            lines.push(currentEntries);
+            currentEntries = [];
+        }
+
+        if (currentEntries.length > 0 && lines.length < maxLines) {
+            lines.push(currentEntries);
+        }
+
+        let visibleCount = lines.reduce((sum, lineEntries) => sum + lineEntries.length, 0);
+        let hiddenCount = entries.length - visibleCount;
+
+        if (hiddenCount > 0 && lines.length > 0) {
+            const lastLine = lines[lines.length - 1];
+
+            while (lastLine.length > 0) {
+                const summaryText = `외 ${hiddenCount}종`;
+                const candidateText = [...lastLine, summaryText].join(separator);
+                if (ctx.measureText(candidateText).width <= maxWidth) break;
+
+                lastLine.pop();
+                hiddenCount++;
+                visibleCount--;
+            }
+
+            lastLine.push(`외 ${hiddenCount}종`);
+        }
+
+        return {
+            lines: lines.map(lineEntries => lineEntries.join(separator)),
+            hiddenCount
+        };
+    }
+
+    /**
      * 도면 페이지를 Canvas 이미지로 추가 (세로 회전)
      */
     async addDiagramPageAsImage(doc, index) {
@@ -1362,21 +1419,40 @@ class WoodcutterApp {
             }
             partCounts[label].count++;
         });
-        const partsInfo = Object.entries(partCounts)
+        const partsEntries = Object.entries(partCounts)
             .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([label, info]) => `${label}: ${info.width}×${info.height} (${info.count}개)`)
-            .join('  ');
+            .map(([label, info]) => `${label}: ${info.width}×${info.height} (${info.count}개)`);
 
-        // 도면 배치 계산 (전체 캔버스 사용)
+        // 범례 배치 계산
         const availableWidth = tempCanvas.width - margin * 2;
         const availableHeight = tempCanvas.height - margin * 2;
+        const legendFontSize = 16;
+        const legendLineHeight = 22;
+        const legendBaseWidth = 70;
+        const minDiagramWidth = availableWidth * 0.72;
+        const maxLegendLines = Math.min(
+            4,
+            Math.max(1, Math.floor((availableWidth - minDiagramWidth - legendBaseWidth) / legendLineHeight) + 1)
+        );
+        const legendMaxWidth = availableHeight - 20;
+
+        ctx.font = `${legendFontSize}px "Noto Sans KR", sans-serif`;
+        const legendLayout = this.wrapPartsLegend(
+            ctx,
+            partsEntries,
+            legendMaxWidth,
+            maxLegendLines
+        );
+        const legendLines = legendLayout.lines;
+        const textAreaWidth = legendBaseWidth + Math.max(0, legendLines.length - 1) * legendLineHeight;
+        const diagramAvailableWidth = availableWidth - textAreaWidth;
 
         // 회전 후 캔버스 크기 (원본의 가로/세로 교체)
         const rotatedWidth = canvas.height;
         const rotatedHeight = canvas.width;
 
-        // 스케일 계산 (회전된 이미지가 가용 공간에 맞도록)
-        const scaleX = availableWidth / rotatedWidth;
+        // 스케일 계산 (범례 전용 영역을 제외한 공간에 도면 배치)
+        const scaleX = diagramAvailableWidth / rotatedWidth;
         const scaleY = availableHeight / rotatedHeight;
         const scale = Math.min(scaleX, scaleY);
 
@@ -1384,7 +1460,7 @@ class WoodcutterApp {
         const drawHeight = rotatedHeight * scale;
 
         // 중앙 정렬을 위한 오프셋
-        const offsetX = margin + (availableWidth - drawWidth) / 2;
+        const offsetX = margin + textAreaWidth + (diagramAvailableWidth - drawWidth) / 2;
         const offsetY = margin + (availableHeight - drawHeight) / 2;
 
         // 캔버스 회전 및 그리기 (-90도 회전으로 세로 방향 출력)
@@ -1404,9 +1480,9 @@ class WoodcutterApp {
         ctx.save();
         ctx.fillStyle = '#333333';
 
-        // 텍스트 시작 위치 (도면 좌측 상단 빈 공간)
-        const textX = offsetX - 45;  // 도면 왼쪽 외부에 배치 (겹치지 않도록)
-        const textY = offsetY + drawHeight - 60;  // 텍스트 끝이 도면 상단을 넘지 않도록
+        // 텍스트 시작 위치 (범례 전용 영역)
+        const textX = margin;
+        const textY = margin + legendMaxWidth;
 
         // -90도 회전 (도면과 같은 방향)
         ctx.translate(textX, textY);
@@ -1421,7 +1497,10 @@ class WoodcutterApp {
         ctx.fillText(cutInfo, 0, 30);
 
         // 부품 정보
-        ctx.fillText(partsInfo, 0, 50);
+        ctx.font = `${legendFontSize}px "Noto Sans KR", sans-serif`;
+        legendLines.forEach((line, lineIndex) => {
+            ctx.fillText(line, 0, 50 + lineIndex * legendLineHeight);
+        });
 
         ctx.restore();
 

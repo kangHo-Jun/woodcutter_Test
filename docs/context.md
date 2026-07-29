@@ -1,7 +1,34 @@
 # context.md — 현재 진행 상황
 
 ## 최종 업데이트
-2026-05-20
+2026-07-29
+
+## 오늘 완료된 작업 (2026-07-29)
+
+### PDF 부품 범례 잘림 수정
+- 대상: `js/main-unified.js`의 `addDiagramPageAsImage()`
+- `wrapPartsLegend()` 헬퍼 추가
+  - `ctx.measureText()`로 항목과 구분자 폭을 누적 측정
+  - 최대 4줄 자동 줄바꿈
+  - 최대 줄 초과 시 마지막 줄을 `외 N종`으로 축약
+- 범례 줄 수에 맞춰 텍스트 전용 영역을 예약하고 도면 scale/offset 재계산
+- 범례와 도면 사이 최소 여백 확보
+
+### 검증 결과
+- CASE1: 2장 ✅ (`AREA_TARGET_HYBRID`)
+- CASE2: 1장 ✅ (`GPP`)
+- CASE3: 1장 ✅ (`GPP`)
+- CASE4: 1장 ✅ (`SKINNY_ANCHOR`)
+- CASE5: 2장 ✅ (`GROUP_SPLIT_2BIN`)
+- 기존 `test_packer.js`: 전체 통과 ✅
+- PDF 3종: 1줄, 축약 없음 ✅
+- PDF 8종: 2줄, 잘림 없음 ✅
+- PDF 30종(Z1~Z4 포함): 4줄, `외 3종` 안전장치 작동 ✅
+- 실제 A4 PDF 출력 및 도면/범례 비겹침 육안 확인 ✅
+
+### Git 기준점
+- 수정 전 태그: `Test_범례잘림_수정전`
+- 수정 후 태그: `Test_범례잘림_자동줄바꿈`
 
 ## 오늘 완료된 작업 (2026-05-20)
 
