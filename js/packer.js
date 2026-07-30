@@ -175,6 +175,15 @@ class GuillotinePacker {
             selectedEngine = 'AREA_TARGET_HYBRID';
         }
 
+        const columnResidualCandidate = this.buildColumnResidualFillCandidate(expandedItems);
+        if (this.isValidPackingResult(columnResidualCandidate) &&
+            columnResidualCandidate.unplaced.length === 0 &&
+            columnResidualCandidate.bins.length < selectedBins.length) {
+            selectedBins = columnResidualCandidate.bins;
+            selectedUnplaced = columnResidualCandidate.unplaced;
+            selectedEngine = 'COLUMN_RESIDUAL_FILL';
+        }
+
         const partitionCandidate = this.guillotinePartitionPlanner(
             items,
             this.binWidth,
@@ -276,6 +285,225 @@ class GuillotinePacker {
             totalEfficiency: this.calculateTotalEfficiency(bins),
             mode: 'auto',
             engine: 'GROUP_SPLIT_2BIN'
+        };
+    }
+
+    buildColumnResidualFillCandidate(expandedItems) {
+        if (!Array.isArray(expandedItems) || expandedItems.length < 3) return null;
+
+        const groups = new Map();
+        expandedItems.forEach(item => {
+            const key = item.originalId;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push({ ...item });
+        });
+        if (groups.size < 2) return null;
+
+        const orientations = item => {
+            const result = [{
+                width: item.width,
+                height: item.height,
+                rotated: !!item.rotated
+            }];
+            if (item.allowRotate && item.width !== item.height) {
+                result.push({
+                    width: item.height,
+                    height: item.width,
+                    rotated: !item.rotated
+                });
+            }
+            return result;
+        };
+
+        const findBestPlan = () => {
+            const plans = [];
+            groups.forEach((anchorItems, anchorKey) => {
+                if (anchorItems.length < 2) return;
+                orientations(anchorItems[0]).forEach(anchor => {
+                    if (anchor.width >= this.binWidth) return;
+                    if ((2 * anchor.height) + this.kerf > this.binHeight) return;
+
+                    const residualWidth = this.binWidth - anchor.width - this.kerf;
+                    groups.forEach((fillItems, fillKey) => {
+                        if (fillKey === anchorKey || fillItems.length === 0) return;
+                        orientations(fillItems[0]).forEach(fill => {
+                            if (fill.width > residualWidth || fill.height > this.binHeight) return;
+                            plans.push({
+                                anchorKey,
+                                fillKey,
+                                anchor,
+                                fill,
+                                residualWidth,
+                                filledArea: fill.width * fill.height
+                            });
+                        });
+                    });
+                });
+            });
+
+            return plans.sort((a, b) =>
+                b.filledArea - a.filledArea ||
+                b.anchor.width - a.anchor.width ||
+                a.anchorKey - b.anchorKey ||
+                a.fillKey - b.fillKey
+            )[0] || null;
+        };
+
+        const createBin = plan => {
+            const anchorItems = groups.get(plan.anchorKey);
+            const fillItems = groups.get(plan.fillKey);
+            const firstAnchor = anchorItems.shift();
+            const secondAnchor = anchorItems.shift();
+            const fillItem = fillItems.shift();
+            const rootRect = { x: 0, y: 0, width: this.binWidth, height: this.binHeight };
+            const leftRect = { x: 0, y: 0, width: plan.anchor.width, height: this.binHeight };
+            const rightX = plan.anchor.width + this.kerf;
+            const rightRect = {
+                x: rightX,
+                y: 0,
+                width: plan.residualWidth,
+                height: this.binHeight
+            };
+            const secondY = plan.anchor.height + this.kerf;
+            const placed = [
+                {
+                    ...firstAnchor,
+                    x: 0,
+                    y: 0,
+                    width: plan.anchor.width,
+                    height: plan.anchor.height,
+                    rotated: plan.anchor.rotated
+                },
+                {
+                    ...secondAnchor,
+                    x: 0,
+                    y: secondY,
+                    width: plan.anchor.width,
+                    height: plan.anchor.height,
+                    rotated: plan.anchor.rotated
+                },
+                {
+                    ...fillItem,
+                    x: rightX,
+                    y: 0,
+                    width: plan.fill.width,
+                    height: plan.fill.height,
+                    rotated: plan.fill.rotated
+                }
+            ];
+            const cutDetails = [
+                this.createAreaTargetCutDetail(
+                    'X', plan.anchor.width, 0, this.binHeight, rootRect
+                ),
+                this.createAreaTargetCutDetail(
+                    'Y', plan.anchor.height, 0, plan.anchor.width, leftRect
+                )
+            ];
+            const freeRects = [];
+            const leftBottomY = secondY + plan.anchor.height + this.kerf;
+            const leftBottomHeight = this.binHeight - leftBottomY;
+            if (leftBottomHeight > 0) {
+                const secondAnchorRect = {
+                    x: 0,
+                    y: secondY,
+                    width: plan.anchor.width,
+                    height: this.binHeight - secondY
+                };
+                cutDetails.push(this.createAreaTargetCutDetail(
+                    'Y',
+                    secondY + plan.anchor.height,
+                    0,
+                    plan.anchor.width,
+                    secondAnchorRect
+                ));
+                freeRects.push({
+                    x: 0,
+                    y: leftBottomY,
+                    width: plan.anchor.width,
+                    height: leftBottomHeight
+                });
+            }
+
+            const rightRemainderX = rightX + plan.fill.width + this.kerf;
+            const rightRemainderWidth = this.binWidth - rightRemainderX;
+            if (rightRemainderWidth > 0) {
+                cutDetails.push(this.createAreaTargetCutDetail(
+                    'X',
+                    rightX + plan.fill.width,
+                    0,
+                    this.binHeight,
+                    rightRect
+                ));
+                freeRects.push({
+                    x: rightRemainderX,
+                    y: 0,
+                    width: rightRemainderWidth,
+                    height: this.binHeight
+                });
+            }
+
+            const fillBottomY = plan.fill.height + this.kerf;
+            const fillBottomHeight = this.binHeight - fillBottomY;
+            if (fillBottomHeight > 0) {
+                const fillColumnRect = {
+                    x: rightX,
+                    y: 0,
+                    width: plan.fill.width,
+                    height: this.binHeight
+                };
+                cutDetails.push(this.createAreaTargetCutDetail(
+                    'Y',
+                    plan.fill.height,
+                    rightX,
+                    rightX + plan.fill.width,
+                    fillColumnRect
+                ));
+                freeRects.push({
+                    x: rightX,
+                    y: fillBottomY,
+                    width: plan.fill.width,
+                    height: fillBottomHeight
+                });
+            }
+
+            const usedArea = placed.reduce((sum, item) => sum + (item.width * item.height), 0);
+            const totalArea = this.binWidth * this.binHeight;
+            return {
+                width: this.binWidth,
+                height: this.binHeight,
+                placed,
+                unplaced: [],
+                freeRects,
+                efficiency: totalArea > 0 ? (usedArea / totalArea) * 100 : 0,
+                usedArea,
+                totalArea,
+                cuttingCount: cutDetails.length,
+                firstCutDirection: 'COLUMN_RESIDUAL_FILL',
+                cutDetails
+            };
+        };
+
+        const bins = [];
+        let plan = findBestPlan();
+        while (plan) {
+            bins.push(createBin(plan));
+            plan = findBestPlan();
+        }
+        if (bins.length === 0) return null;
+
+        const remaining = Array.from(groups.values()).flat();
+        const fallback = remaining.length > 0
+            ? this.packAdaptiveBase(remaining)
+            : { bins: [], unplaced: [] };
+        if (!fallback || fallback.unplaced.length > 0) return null;
+
+        const allBins = [...bins, ...fallback.bins];
+        return {
+            bins: allBins,
+            unplaced: [],
+            totalEfficiency: this.calculateTotalEfficiency(allBins),
+            mode: 'auto',
+            engine: 'COLUMN_RESIDUAL_FILL'
         };
     }
 
