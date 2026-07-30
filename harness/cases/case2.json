@@ -1,0 +1,11 @@
+{
+  "name": "CASE2",
+  "classification": "required",
+  "source": "docs/알고리즘2개.md",
+  "board": { "width": 1220, "height": 2440, "thickness": 18 },
+  "settings": { "kerf": 4.2, "mode": "auto", "considerGrain": false, "enableTrim": false },
+  "expected": { "maxBins": 1, "engineReference": "GPP" },
+  "items": [
+    { "id": "A", "width": 600, "height": 900, "qty": 5, "allowRotate": true }
+  ]
+}

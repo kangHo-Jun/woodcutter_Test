@@ -1,0 +1,15 @@
+{
+  "name": "데이터셋A-1",
+  "classification": "required",
+  "source": "Phase 0 작업 지시서",
+  "board": { "width": 1220, "height": 2440, "thickness": 18 },
+  "settings": { "kerf": 4.2, "mode": "auto", "considerGrain": false, "enableTrim": false },
+  "expected": { "maxBins": 1, "engineReference": "A" },
+  "items": [
+    { "id": "A", "width": 820, "height": 750, "qty": 1, "allowRotate": true },
+    { "id": "B", "width": 545, "height": 450, "qty": 1, "allowRotate": true },
+    { "id": "C", "width": 205, "height": 450, "qty": 1, "allowRotate": true },
+    { "id": "D", "width": 1270, "height": 50, "qty": 2, "allowRotate": true },
+    { "id": "E", "width": 750, "height": 50, "qty": 3, "allowRotate": true }
+  ]
+}

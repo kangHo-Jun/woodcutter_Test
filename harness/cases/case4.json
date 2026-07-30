@@ -1,0 +1,14 @@
+{
+  "name": "CASE4",
+  "classification": "required",
+  "source": "docs/알고리즘2개.md",
+  "board": { "width": 1220, "height": 2440, "thickness": 18 },
+  "settings": { "kerf": 4.2, "mode": "auto", "considerGrain": false, "enableTrim": false },
+  "expected": { "maxBins": 1, "engineReference": "SKINNY_ANCHOR" },
+  "items": [
+    { "id": "A", "width": 397, "height": 596, "qty": 4, "allowRotate": true },
+    { "id": "B", "width": 771, "height": 286, "qty": 4, "allowRotate": true },
+    { "id": "C", "width": 600, "height": 285, "qty": 4, "allowRotate": true },
+    { "id": "D", "width": 770, "height": 100, "qty": 2, "allowRotate": true }
+  ]
+}

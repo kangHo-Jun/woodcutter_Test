@@ -1,0 +1,17 @@
+{
+  "name": "CASE1",
+  "classification": "required",
+  "source": "docs/알고리즘2개.md",
+  "board": { "width": 1220, "height": 2440, "thickness": 18 },
+  "settings": { "kerf": 4.2, "mode": "auto", "considerGrain": false, "enableTrim": false },
+  "expected": { "maxBins": 2, "engineReference": "AREA_TARGET_HYBRID" },
+  "items": [
+    { "id": "A", "width": 390, "height": 745, "qty": 3, "allowRotate": true },
+    { "id": "B", "width": 405, "height": 645, "qty": 5, "allowRotate": true },
+    { "id": "C", "width": 295, "height": 790, "qty": 2, "allowRotate": true },
+    { "id": "D", "width": 295, "height": 745, "qty": 2, "allowRotate": true },
+    { "id": "E", "width": 295, "height": 645, "qty": 4, "allowRotate": true },
+    { "id": "F", "width": 295, "height": 535, "qty": 2, "allowRotate": true },
+    { "id": "G", "width": 595, "height": 595, "qty": 1, "allowRotate": true }
+  ]
+}
