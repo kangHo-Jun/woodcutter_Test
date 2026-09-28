@@ -3,6 +3,13 @@
 ## 최종 업데이트
 2026-09-28
 
+## 2026-09-28 — CASE5 구버전 스크립트 캐시 방어
+- 사용자가 보고한 오래된 16회 엇갈린 결과를 확인. 현재 코드로 새로고침 후 같은 UI 입력을 계산하면 CASE5 기본 결과가 4줄450/450/350/350, 20회로 생성된다. 관찰된 문제는 새로고침 전 이미 열린 페이지 상태였으며, 서버가 새로고침 중 구 JS를 반환했다는 직접 증거는 확인되지 않았다.
+- Test 진입 HTML은 `index.html` 하나이며 `main-unified.js`/`repeatedLayout.js`에 안정적인 버전 없는 URL을 사용하고 있었다. Service Worker/Cache API 사용 없음. 두 계산 스크립트 URL에 같은 `v=` revision을 추가해 HTML 재로드가 이전 안정 URL 캐시를 재사용하지 않도록 했다.
+- `harness/repeated-layout/cache-version.browser.cjs`는 채택 코드가 빠진 구버전 JS를 이전 무버전 URL에서 먼저 제공해 CASE5 16회 출력을 재현한 뒤, 현재 HTML 재로드가 버전 쿼리가 있는 두 새 URL을 요청하고 CASE5를 4줄/20회/30,000원으로 계산하는지 검증한다. 새 URL에서 각 행 450/450/350/350 폭과 좌표도 확인한다.
+- query bust는 이후 HTML을 다시 불러오는 페이지에 적용된다. 이미 열린 문서의 JS와 메모리 결과는 자동 교체되지 않으므로 사용자는 새로고침/재계산해야 한다. 현재 조치는 Test에만 적용하고 v4/v10은 변경하지 않았다.
+- 되돌림 태그 `case5-cache-version-before-20260928`.
+
 ## 2026-09-28 — CASE5 기본 결과 정렬 적용
 - `RepeatedLayout.approvedDefaultResult`를 main.handleCalculate에 연결. 승인된 CASE5 조건에만 정렬 후보를 실제 result로 채택하여 기본 화면과 일반 PDF에 반영한다. 다른 치수/수량/설정에는 원본 유지.
 - 실제 UI10개 검증: CASE5만 의도한4줄450/450/350/350 배치, 나머지9개 배치·절단·잔재·요금 정확히 동일. 신규11/11, repeated-layout39/39, 기존회귀8/8, PDF10/10 통과.
