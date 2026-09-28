@@ -1,0 +1,24 @@
+#repeatedLayoutDialog { width: min(1440px, 94vw); max-width: 94vw; max-height: 92dvh; margin: auto; padding: 24px; border: 1px solid #ccd8d0; border-radius: 14px; background: #fafbf9; color: #19382e; overflow: auto; box-sizing: border-box; }
+#repeatedLayoutDialog::backdrop { background: rgba(14, 35, 27, .55); }
+#repeatedLayoutDialog h2 { font-size: 23px; margin: 0 0 8px; }
+#repeatedLayoutDialog h3 { font-size: 18px; margin: 0 0 12px; }
+#repeatedLayoutDialog p { line-height: 1.6; margin: 8px 0; }
+.rlc-header, .rlc-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; }
+.rlc-header { align-items: flex-start; }
+.rlc-header button { flex-shrink: 0; }
+.rlc-toolbar label { display: flex; gap: 8px; align-items: center; }
+.rlc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin: 18px 0; }
+.rlc-grid section { min-width: 0; padding: 16px; background: white; border: 1px solid #dce4dd; border-radius: 10px; }
+.rlc-grid canvas { display: block; width: 100%; height: auto; margin-bottom: 12px; }
+.rlc-diagram { overflow-x: auto; }
+.rlc-mobile-hint { display: none; }
+.rlc-legend { color: #476357; overflow-wrap: anywhere; }
+#repeatedLayoutStatus { color: #72511f; }
+.canvas-controls-top:has(#compareLayoutBtn) { flex-wrap: wrap; }
+@media (max-width: 800px) {
+    #repeatedLayoutDialog { padding: 16px; }
+    .rlc-grid { grid-template-columns: minmax(0, 1fr); }
+    .rlc-toolbar { align-items: flex-start; flex-direction: column; }
+    .rlc-diagram canvas { min-width: 800px; }
+    .rlc-mobile-hint { display: block; font-size: 13px; color: #526b60; }
+}

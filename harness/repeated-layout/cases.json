@@ -1,0 +1,403 @@
+[
+  {
+    "id": "CASE1",
+    "purpose": "기존 배치 완전 보존",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": false,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 390,
+        "height": 745,
+        "qty": 3,
+        "allowRotate": true
+      },
+      {
+        "id": "B",
+        "width": 405,
+        "height": 645,
+        "qty": 5,
+        "allowRotate": true
+      },
+      {
+        "id": "C",
+        "width": 295,
+        "height": 790,
+        "qty": 2,
+        "allowRotate": true
+      },
+      {
+        "id": "D",
+        "width": 295,
+        "height": 745,
+        "qty": 2,
+        "allowRotate": true
+      },
+      {
+        "id": "E",
+        "width": 295,
+        "height": 645,
+        "qty": 4,
+        "allowRotate": true
+      },
+      {
+        "id": "F",
+        "width": 295,
+        "height": 535,
+        "qty": 2,
+        "allowRotate": true
+      },
+      {
+        "id": "G",
+        "width": 595,
+        "height": 595,
+        "qty": 1,
+        "allowRotate": true
+      }
+    ],
+    "expected": {
+      "candidate": false,
+      "bins": 2
+    }
+  },
+  {
+    "id": "CASE2",
+    "purpose": "기존 배치 완전 보존",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": false,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 600,
+        "height": 900,
+        "qty": 5,
+        "allowRotate": true
+      }
+    ],
+    "expected": {
+      "candidate": false,
+      "bins": 1
+    }
+  },
+  {
+    "id": "CASE3",
+    "purpose": "기존 배치 완전 보존",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": false,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 400,
+        "height": 1000,
+        "qty": 7,
+        "allowRotate": true
+      }
+    ],
+    "expected": {
+      "candidate": false,
+      "bins": 1
+    }
+  },
+  {
+    "id": "CASE4",
+    "purpose": "기존 배치 완전 보존",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": false,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 397,
+        "height": 596,
+        "qty": 4,
+        "allowRotate": true
+      },
+      {
+        "id": "B",
+        "width": 771,
+        "height": 286,
+        "qty": 4,
+        "allowRotate": true
+      },
+      {
+        "id": "C",
+        "width": 600,
+        "height": 285,
+        "qty": 4,
+        "allowRotate": true
+      },
+      {
+        "id": "D",
+        "width": 770,
+        "height": 100,
+        "qty": 2,
+        "allowRotate": true
+      }
+    ],
+    "expected": {
+      "candidate": false,
+      "bins": 1
+    }
+  },
+  {
+    "id": "CASE5",
+    "purpose": "고객 도면: 동일한 4줄",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": true,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 260,
+        "height": 450,
+        "qty": 8,
+        "allowRotate": false
+      },
+      {
+        "id": "B",
+        "width": 260,
+        "height": 350,
+        "qty": 8,
+        "allowRotate": false
+      }
+    ],
+    "expected": {
+      "candidate": true,
+      "rows": 4,
+      "pattern": [
+        450,
+        450,
+        350,
+        350
+      ]
+    }
+  },
+  {
+    "id": "CASE6",
+    "purpose": "단일 규격 16개: 동일한 4줄",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": true,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 260,
+        "height": 450,
+        "qty": 16,
+        "allowRotate": false
+      }
+    ],
+    "expected": {
+      "candidate": true,
+      "rows": 4,
+      "pattern": [
+        450,
+        450,
+        450,
+        450
+      ]
+    }
+  },
+  {
+    "id": "CASE7",
+    "purpose": "길이 3종: 동일한 4줄",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": true,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 260,
+        "height": 450,
+        "qty": 4,
+        "allowRotate": false
+      },
+      {
+        "id": "B",
+        "width": 260,
+        "height": 350,
+        "qty": 4,
+        "allowRotate": false
+      },
+      {
+        "id": "C",
+        "width": 260,
+        "height": 500,
+        "qty": 4,
+        "allowRotate": false
+      }
+    ],
+    "expected": {
+      "candidate": true,
+      "rows": 4,
+      "pattern": [
+        500,
+        450,
+        350
+      ]
+    }
+  },
+  {
+    "id": "CASE8",
+    "purpose": "수량 7/9: 완전 반복 불가, 기존 결과 유지",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": true,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 260,
+        "height": 450,
+        "qty": 7,
+        "allowRotate": false
+      },
+      {
+        "id": "B",
+        "width": 260,
+        "height": 350,
+        "qty": 9,
+        "allowRotate": false
+      }
+    ],
+    "expected": {
+      "candidate": false
+    }
+  },
+  {
+    "id": "CASE9",
+    "purpose": "폭 260/280 혼합: 적용 제외",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": true,
+      "enableTrim": false
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 260,
+        "height": 450,
+        "qty": 8,
+        "allowRotate": false
+      },
+      {
+        "id": "B",
+        "width": 280,
+        "height": 350,
+        "qty": 8,
+        "allowRotate": false
+      }
+    ],
+    "expected": {
+      "candidate": false
+    }
+  },
+  {
+    "id": "CASE10",
+    "purpose": "톱날/전단 유효 폭 경계: 4줄 불가",
+    "board": {
+      "width": 1070,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": true,
+      "enableTrim": true,
+      "trimMargin": 9
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 260,
+        "height": 450,
+        "qty": 8,
+        "allowRotate": false
+      },
+      {
+        "id": "B",
+        "width": 260,
+        "height": 350,
+        "qty": 8,
+        "allowRotate": false
+      }
+    ],
+    "expected": {
+      "candidate": false,
+      "effectiveWidth": 1043.6
+    }
+  }
+]

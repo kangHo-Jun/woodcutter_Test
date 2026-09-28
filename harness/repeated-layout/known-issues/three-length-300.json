@@ -1,0 +1,40 @@
+{
+  "id": "CASE7",
+  "purpose": "길이 3종: 동일한 4줄",
+  "board": {
+    "width": 1220,
+    "height": 2440,
+    "thickness": 18
+  },
+  "settings": {
+    "kerf": 4.2,
+    "mode": "auto",
+    "considerGrain": true,
+    "enableTrim": false
+  },
+  "items": [
+    {
+      "id": "A",
+      "width": 450,
+      "height": 260,
+      "qty": 4,
+      "allowRotate": false
+    },
+    {
+      "id": "B",
+      "width": 350,
+      "height": 260,
+      "qty": 4,
+      "allowRotate": false
+    },
+    {
+      "id": "C",
+      "width": 300,
+      "height": 260,
+      "qty": 4,
+      "allowRotate": false
+    }
+  ],
+  "name": "LEGACY-THREE-LENGTH-300",
+  "note": "Existing engine cutDetails crosses a part; no new module needed to reproduce. UI input 260x450/350/300, qty4 each."
+}

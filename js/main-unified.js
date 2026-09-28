@@ -588,7 +588,24 @@ class WoodcutterApp {
 
             // cutDirection: 'horizontal' | 'auto'
             const mode = settings.cutDirection || 'auto';
-            const result = packer.pack(items, mode);
+            let result = packer.pack(items, mode);
+
+            // The approved customer drawing is the only current production
+            // adoption. Keep every other layout on the packer's baseline path.
+            if (window.RepeatedLayout?.approvedDefaultResult) {
+                result = window.RepeatedLayout.approvedDefaultResult({
+                    board: { width: packerW, height: packerH },
+                    kerf: settings.kerf,
+                    items,
+                    baseline: result,
+                    settings: { ...settings, considerGrain },
+                    boardSpec: {
+                        ...this.state.boardSpec,
+                        thickness: parseFloat(document.getElementById('boardThickness')?.value) || 18
+                    },
+                    cuttingList: this.state.cuttingList
+                });
+            }
 
             if (result.unplaced.length > 0) {
                 alert(`${result.unplaced.length}개의 부품을 배치할 수 없습니다. 부품 크기를 확인하세요.`);
@@ -1189,14 +1206,27 @@ class WoodcutterApp {
             return;
         }
 
+        const button = document.getElementById('previewPdfBtn');
+        if (button?.disabled) return;
+        if (button) button.disabled = true;
+        const preview = window.open('about:blank', '_blank');
         try {
             const pdfBlob = await this.generatePdfBlob();
             const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
+            if (!preview) throw new Error('PDF 미리보기 창을 열 수 없습니다. 팝업 차단 설정을 확인하세요.');
+            preview.document.title = '재단 계획 PDF 미리보기';
+            preview.document.body.style.cssText = 'margin:0;width:100vw;height:100vh;overflow:hidden';
+            const frame = preview.document.createElement('iframe');
+            frame.title = 'PDF 미리보기'; frame.src = url;
+            frame.style.cssText = 'border:0;width:100%;height:100%';
+            preview.document.body.replaceChildren(frame);
+            // PDF.js/native viewers may keep reading the blob after the new tab's first load event.
+            setTimeout(() => URL.revokeObjectURL(url), 300_000);
         } catch (error) {
+            if (preview && !preview.closed) preview.close();
             console.error('PDF 미리보기 오류:', error);
-            alert('PDF 미리보기 중 오류가 발생했습니다');
-        }
+            alert(error.code === 'PDF_SIZE_LIMIT' ? error.message : 'PDF 미리보기 중 오류가 발생했습니다');
+        } finally { if (button) button.disabled = false; }
     }
 
     /**
@@ -1208,46 +1238,46 @@ class WoodcutterApp {
             return;
         }
 
+        const button = document.getElementById('downloadPdfBtn');
+        if (button?.disabled) return;
+        if (button) button.disabled = true;
         try {
             const pdfBlob = await this.generatePdfBlob();
-            const url = URL.createObjectURL(pdfBlob);
-            const a = document.createElement('a');
-            a.href = url;
             const date = new Date();
             const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-            a.download = `재단계획_${dateStr}.pdf`;
-            a.click();
-            URL.revokeObjectURL(url);
+            window.PdfExport.downloadBlob({ blob: pdfBlob, filename: `재단계획_${dateStr}.pdf`, document, URL });
             // PDF download completed
         } catch (error) {
             console.error('PDF 생성 오류:', error);
-            alert('PDF 생성 중 오류가 발생했습니다');
-        }
+            alert(error.code === 'PDF_SIZE_LIMIT' ? error.message : 'PDF 생성 중 오류가 발생했습니다');
+        } finally { if (button) button.disabled = false; }
     }
 
     /**
      * PDF Blob 생성 (모든 페이지 Canvas 이미지 방식)
      */
     async generatePdfBlob() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
-
-        // Page 1: 요약표 (Canvas 이미지)
-        await this.addSummaryPageAsImage(doc);
-
-        // Page 2~: 그룹별 대표 도면 (Canvas 이미지)
-        for (let i = 0; i < this.groupCanvases.length; i++) {
-            doc.addPage();
-            await this.addDiagramPageAsImage(doc, i);
-        }
-
-        return doc.output('blob');
+        const stateSnapshot = structuredClone({ boardSpec: this.state.boardSpec, costInfo: this.state.costInfo,
+            result: this.state.result, labeledGroups: this.state.labeledGroups, settings: this.state.settings });
+        const groups = this.groupCanvases.map(({ canvas, bin, count }) => {
+            const copy = document.createElement('canvas'); copy.width = canvas.width; copy.height = canvas.height;
+            copy.getContext('2d').drawImage(canvas, 0, 0); return { canvas: copy, bin: structuredClone(bin), count };
+        });
+        return window.PdfExport.buildWithinLimit({ buildDocument: async profile => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: profile.compress });
+            await this.addSummaryPageAsImage(doc, profile, stateSnapshot);
+            for (let i = 0; i < groups.length; i++) {
+                doc.addPage(); await this.addDiagramPageAsImage(doc, i, profile, stateSnapshot, groups);
+            }
+            return doc;
+        }}).then(result => result.blob);
     }
 
     /**
      * 요약 페이지를 Canvas 이미지로 추가
      */
-    async addSummaryPageAsImage(doc) {
+    async addSummaryPageAsImage(doc, profile, exportState = this.state) {
         const canvas = document.createElement('canvas');
         canvas.width = 794;
         canvas.height = 1123;
@@ -1278,9 +1308,9 @@ class WoodcutterApp {
         y += 35;
 
         ctx.font = '18px "Noto Sans KR", sans-serif';
-        ctx.fillText(`크기: ${this.state.boardSpec.width} × ${this.state.boardSpec.height} mm`, margin + 20, y);
+        ctx.fillText(`크기: ${exportState.boardSpec.width} × ${exportState.boardSpec.height} mm`, margin + 20, y);
         y += 30;
-        ctx.fillText(`결 고려: ${this.state.boardSpec.considerGrain ? '예' : '아니오'}`, margin + 20, y);
+        ctx.fillText(`결 고려: ${exportState.boardSpec.considerGrain ? '예' : '아니오'}`, margin + 20, y);
         y += 50;
 
         // 최적화 결과
@@ -1288,8 +1318,8 @@ class WoodcutterApp {
         ctx.fillText('최적화 결과', margin, y);
         y += 35;
 
-        const costInfo = this.state.costInfo;
-        const result = this.state.result;
+        const costInfo = exportState.costInfo;
+        const result = exportState.result;
         ctx.font = '18px "Noto Sans KR", sans-serif';
         ctx.fillText(`총 판재수: ${result.bins.length}장`, margin + 20, y);
         y += 30;
@@ -1304,7 +1334,7 @@ class WoodcutterApp {
         y += 35;
 
         ctx.font = '18px "Noto Sans KR", sans-serif';
-        const labeledGroups = this.state.labeledGroups;
+        const labeledGroups = exportState.labeledGroups;
         if (labeledGroups && labeledGroups.length > 0) {
             labeledGroups.forEach(group => {
                 const infoText = `${group.label}: ${group.width}×${group.height}mm - `;
@@ -1324,8 +1354,8 @@ class WoodcutterApp {
         }
 
         // PDF에 추가
-        const imgData = canvas.toDataURL('image/png');
-        doc.addImage(imgData, 'PNG', 0, 0, 210, 297);
+        const imgData = canvas.toDataURL(profile.mimeType, profile.quality);
+        doc.addImage(imgData, profile.imageFormat, 0, 0, 210, 297, undefined, profile.imageCompression);
     }
 
     /**
@@ -1388,8 +1418,8 @@ class WoodcutterApp {
     /**
      * 도면 페이지를 Canvas 이미지로 추가 (세로 회전)
      */
-    async addDiagramPageAsImage(doc, index) {
-        const { canvas, bin, count } = this.groupCanvases[index];
+    async addDiagramPageAsImage(doc, index, profile, exportState = this.state, groups = this.groupCanvases) {
+        const { canvas, bin, count } = groups[index];
 
         // 새 캔버스에 한글 텍스트 포함하여 렌더링 (A4 세로)
         const tempCanvas = document.createElement('canvas');
@@ -1405,12 +1435,12 @@ class WoodcutterApp {
 
         // 텍스트 정보 준비 (나중에 회전하여 배치)
         const title = count > 1 ? `패턴 ${index + 1} (${count}장 동일)` : `패턴 ${index + 1}`;
-        const settings = window.SettingsManager ? SettingsManager.readFromUI() : { enableTrim: true };
+        const settings = exportState.settings || { enableTrim: true };
         const trimStatus = settings.enableTrim ? '전단(O)' : '전단(X)';
         const cutInfo = `절단: ${bin.cuttingCount}회  |  ${trimStatus}`;
 
         // 부품 사이즈와 개수 계산
-        const labeledGroups = this.state.labeledGroups || [];
+        const labeledGroups = exportState.labeledGroups || [];
         const partCounts = {};
         bin.placed.forEach(part => {
             const label = window.LabelingEngine ? LabelingEngine.findLabel(part.width, part.height, labeledGroups) : '?';
@@ -1505,8 +1535,8 @@ class WoodcutterApp {
         ctx.restore();
 
         // PDF에 추가
-        const imgData = tempCanvas.toDataURL('image/png');
-        doc.addImage(imgData, 'PNG', 0, 0, 210, 297);
+        const imgData = tempCanvas.toDataURL(profile.mimeType, profile.quality);
+        doc.addImage(imgData, profile.imageFormat, 0, 0, 210, 297, undefined, profile.imageCompression);
     }
 
     /**

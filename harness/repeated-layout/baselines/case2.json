@@ -1,0 +1,194 @@
+{
+  "caseData": {
+    "name": "CASE2",
+    "classification": "required",
+    "source": "docs/알고리즘2개.md",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": false,
+      "enableTrim": false
+    },
+    "expected": {
+      "maxBins": 1,
+      "engineReference": "GPP"
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 600,
+        "height": 900,
+        "qty": 5,
+        "allowRotate": true
+      }
+    ]
+  },
+  "result": {
+    "bins": [
+      {
+        "width": 2440,
+        "height": 1220,
+        "placed": [
+          {
+            "width": 600,
+            "height": 900,
+            "id": "0-0",
+            "originalId": 0,
+            "originalWidth": 600,
+            "originalHeight": 900,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "width": 900,
+            "height": 600,
+            "id": "0-1",
+            "originalId": 0,
+            "originalWidth": 600,
+            "originalHeight": 900,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 604.2,
+            "y": 0
+          },
+          {
+            "width": 900,
+            "height": 600,
+            "id": "0-2",
+            "originalId": 0,
+            "originalWidth": 600,
+            "originalHeight": 900,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 604.2,
+            "y": 604.2
+          },
+          {
+            "width": 900,
+            "height": 600,
+            "id": "0-3",
+            "originalId": 0,
+            "originalWidth": 600,
+            "originalHeight": 900,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 1508.4,
+            "y": 0
+          },
+          {
+            "width": 900,
+            "height": 600,
+            "id": "0-4",
+            "originalId": 0,
+            "originalWidth": 600,
+            "originalHeight": 900,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 1508.4,
+            "y": 604.2
+          }
+        ],
+        "unplaced": [],
+        "freeRects": [],
+        "efficiency": 90.70142434829347,
+        "usedArea": 2700000,
+        "totalArea": 2976800,
+        "cuttingCount": 4,
+        "firstCutDirection": "GPP",
+        "cutDetails": [
+          {
+            "axis": "X",
+            "pos": 600,
+            "spanStart": 0,
+            "spanEnd": 1220,
+            "length": 1220,
+            "fullSpan": true,
+            "sourceRect": {
+              "x": 0,
+              "y": 0,
+              "width": 2440,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              600,
+              1835.8
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1504.2,
+            "spanStart": 0,
+            "spanEnd": 1220,
+            "length": 1220,
+            "fullSpan": true,
+            "sourceRect": {
+              "x": 604.2,
+              "y": 0,
+              "width": 1835.8,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              900,
+              931.5999999999999
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 600,
+            "spanStart": 604.2,
+            "spanEnd": 1504.2,
+            "length": 900,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 604.2,
+              "y": 0,
+              "width": 900,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              600,
+              615.8
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 600,
+            "spanStart": 1508.4,
+            "spanEnd": 2440,
+            "length": 931.5999999999999,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1508.4,
+              "y": 0,
+              "width": 931.5999999999999,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              600,
+              615.8
+            ]
+          }
+        ]
+      }
+    ],
+    "unplaced": [],
+    "totalEfficiency": 90.70142434829347,
+    "mode": "auto",
+    "engine": "GPP"
+  },
+  "cost": {
+    "totalCuttingCost": 6000,
+    "totalCuts": 4,
+    "billableCuts": 4,
+    "usageRate": 90.7,
+    "panelCount": 1,
+    "trimCuts": 0
+  }
+}

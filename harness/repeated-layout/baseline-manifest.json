@@ -1,0 +1,13 @@
+{
+  "source": "앞서 사용자에게 보여드린 current-case-layouts 실행 결과",
+  "date": "2026-09-22",
+  "head": "5e54a96",
+  "repeatsPerProtectedCase": 20,
+  "variantsPerProtectedCase": 1,
+  "files": {
+    "packer.js": "dac2a75f96fa17aaaa037b25630501ff66b6bb909bf9720a3e0576eecaa0b664",
+    "costCalculator.js": "43365e95e14fc2ebb090d80f82eae7d6967bd51056c890e21b4a1f1145b5ef7a",
+    "main-unified.js": "1c5d1cba9311380765aa9cd0cf6d732a22283bac35c3222c27dca104f58190c4",
+    "settingsManager.js": "ef153f71eec7928e831e15e8d52bfe4dbfef7ab80886212e8568820c7d3d22a8"
+  }
+}

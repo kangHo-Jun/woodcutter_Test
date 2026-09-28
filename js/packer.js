@@ -1103,8 +1103,17 @@ class GuillotinePacker {
         ];
 
         let bestCandidate = null;
+        const searchedOrders = [];
         orderBuilders.forEach(buildOrder => {
-            const attempt = this.searchAreaTargetHybridLayout(buildOrder(items), targetBinCount);
+            const orderedItems = buildOrder(items);
+            const alreadySearched = searchedOrders.some(previous =>
+                previous.length === orderedItems.length &&
+                previous.every((item, index) => item === orderedItems[index])
+            );
+            if (alreadySearched) return;
+            searchedOrders.push(orderedItems);
+
+            const attempt = this.searchAreaTargetHybridLayout(orderedItems, targetBinCount);
             if (!attempt) return;
             if (!bestCandidate) {
                 bestCandidate = attempt;
@@ -1154,8 +1163,15 @@ class GuillotinePacker {
                 return null;
             }
 
-            nextStates.sort((a, b) => this.scoreAreaTargetState(b) - this.scoreAreaTargetState(a));
-            states = nextStates.slice(0, beamWidth);
+            // The score is pure for a completed candidate state. Cache it once
+            // per state instead of re-walking every bin/free rectangle for every
+            // comparator invocation during sort.
+            const scoredStates = nextStates.map(state => ({
+                state,
+                score: this.scoreAreaTargetState(state)
+            }));
+            scoredStates.sort((a, b) => b.score - a.score);
+            states = scoredStates.slice(0, beamWidth).map(entry => entry.state);
         }
 
         const finalState = [...states].sort((a, b) => this.compareAreaTargetFinalStates(a, b))[0];
@@ -1250,22 +1266,16 @@ class GuillotinePacker {
     }
 
     placeAreaTargetItem(state, binIndex, rectIndex, item, rect, orientation, splitMode) {
-        const bins = state.bins.map((bin, index) => {
-            if (index !== binIndex) {
-                return {
-                    ...bin,
-                    placed: [...bin.placed],
-                    freeRects: [...bin.freeRects],
-                    cutDetails: [...bin.cutDetails]
-                };
-            }
-            return {
-                ...bin,
-                placed: [...bin.placed],
-                freeRects: [...bin.freeRects],
-                cutDetails: [...bin.cutDetails]
-            };
-        });
+        // Branches only mutate the selected bin below. Other bins remain read-only
+        // and are copied on a later branch only if they become the selected bin.
+        const bins = [...state.bins];
+        const sourceBin = state.bins[binIndex];
+        bins[binIndex] = {
+            ...sourceBin,
+            placed: [...sourceBin.placed],
+            freeRects: [...sourceBin.freeRects],
+            cutDetails: [...sourceBin.cutDetails]
+        };
 
         const targetBin = bins[binIndex];
         const nextFreeRects = targetBin.freeRects.filter((_, index) => index !== rectIndex);

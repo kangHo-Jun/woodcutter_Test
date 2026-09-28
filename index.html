@@ -15,6 +15,8 @@
 
     <!-- jsPDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="js/pdfExport.js"></script>
+    <link rel="stylesheet" href="css/repeated-layout.css">
 </head>
 
 <body>
@@ -225,6 +227,7 @@
             <div class="canvas-controls-top" id="canvasControlsTop" style="display: none;">
                 <button class="btn btn-secondary" id="previewPdfBtn">미리보기</button>
                 <button class="btn btn-primary" id="downloadPdfBtn">PDF 다운로드</button>
+                <button class="btn btn-secondary" id="compareLayoutBtn" disabled>반복 배치 비교 · Test</button>
                 <div class="share-dropdown">
                 </div>
             </div>
@@ -314,6 +317,27 @@
 
     <!-- Main Application Script -->
     <script src="js/main-unified.js"></script>
+    <dialog id="repeatedLayoutDialog" aria-labelledby="repeatedLayoutTitle">
+        <div class="rlc-header">
+            <div><h2 id="repeatedLayoutTitle">반복 배치 비교 · Test</h2>
+                <p>기존 계산 결과와 요금은 유지됩니다. 후보는 작업 검토용입니다.</p></div>
+            <button class="btn btn-secondary" id="closeRepeatedLayout" autofocus>닫기</button>
+        </div>
+        <div class="rlc-toolbar">
+            <label><input type="checkbox" id="repeatedLayoutEnabled" checked> 반복 배치 후보 보기</label>
+            <button class="btn btn-primary" id="downloadComparisonPdf">비교 PDF 다운로드</button>
+        </div>
+        <p id="repeatedLayoutSummary"></p>
+        <p id="repeatedLayoutStatus" role="status" aria-live="polite"></p>
+        <p class="rlc-mobile-hint">작은 화면에서는 도면을 좌우로 밀어 전체 배치를 확인하세요.</p>
+        <div class="rlc-grid">
+            <section aria-label="기존 배치"><h3>기존 배치</h3><div id="repeatedLayoutBaseline"></div></section>
+            <section aria-label="반복 배치 후보"><h3>반복 배치 후보</h3><div id="repeatedLayoutCandidate"></div></section>
+        </div>
+        <p id="repeatedLayoutLegend" class="rlc-legend"></p>
+    </dialog>
+    <script src="js/repeatedLayout.js"></script>
+    <script src="js/repeatedLayoutUI.js"></script>
 
     <!-- UI Layer: Quick Win Enhancements -->
     <script>

@@ -1,0 +1,871 @@
+{
+  "caseData": {
+    "name": "CASE1",
+    "classification": "required",
+    "source": "docs/알고리즘2개.md",
+    "board": {
+      "width": 1220,
+      "height": 2440,
+      "thickness": 18
+    },
+    "settings": {
+      "kerf": 4.2,
+      "mode": "auto",
+      "considerGrain": false,
+      "enableTrim": false
+    },
+    "expected": {
+      "maxBins": 2,
+      "engineReference": "AREA_TARGET_HYBRID"
+    },
+    "items": [
+      {
+        "id": "A",
+        "width": 390,
+        "height": 745,
+        "qty": 3,
+        "allowRotate": true
+      },
+      {
+        "id": "B",
+        "width": 405,
+        "height": 645,
+        "qty": 5,
+        "allowRotate": true
+      },
+      {
+        "id": "C",
+        "width": 295,
+        "height": 790,
+        "qty": 2,
+        "allowRotate": true
+      },
+      {
+        "id": "D",
+        "width": 295,
+        "height": 745,
+        "qty": 2,
+        "allowRotate": true
+      },
+      {
+        "id": "E",
+        "width": 295,
+        "height": 645,
+        "qty": 4,
+        "allowRotate": true
+      },
+      {
+        "id": "F",
+        "width": 295,
+        "height": 535,
+        "qty": 2,
+        "allowRotate": true
+      },
+      {
+        "id": "G",
+        "width": 595,
+        "height": 595,
+        "qty": 1,
+        "allowRotate": true
+      }
+    ]
+  },
+  "result": {
+    "bins": [
+      {
+        "width": 2440,
+        "height": 1220,
+        "placed": [
+          {
+            "width": 595,
+            "height": 595,
+            "id": "6-0",
+            "originalId": 6,
+            "originalWidth": 595,
+            "originalHeight": 595,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "width": 405,
+            "height": 645,
+            "id": "1-0",
+            "originalId": 1,
+            "originalWidth": 405,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 599.2,
+            "y": 0
+          },
+          {
+            "width": 405,
+            "height": 645,
+            "id": "1-1",
+            "originalId": 1,
+            "originalWidth": 405,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 1008.4000000000001,
+            "y": 0
+          },
+          {
+            "width": 405,
+            "height": 645,
+            "id": "1-2",
+            "originalId": 1,
+            "originalWidth": 405,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 1417.6000000000001,
+            "y": 0
+          },
+          {
+            "width": 405,
+            "height": 645,
+            "id": "1-3",
+            "originalId": 1,
+            "originalWidth": 405,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 1826.8000000000002,
+            "y": 0
+          },
+          {
+            "width": 645,
+            "height": 405,
+            "id": "1-4",
+            "originalId": 1,
+            "originalWidth": 405,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 599.2,
+            "y": 649.2
+          },
+          {
+            "width": 745,
+            "height": 390,
+            "id": "0-0",
+            "originalId": 0,
+            "originalWidth": 390,
+            "originalHeight": 745,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 1248.4,
+            "y": 649.2
+          },
+          {
+            "width": 295,
+            "height": 535,
+            "id": "5-0",
+            "originalId": 5,
+            "originalWidth": 295,
+            "originalHeight": 535,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 0,
+            "y": 599.2
+          },
+          {
+            "width": 295,
+            "height": 535,
+            "id": "5-1",
+            "originalId": 5,
+            "originalWidth": 295,
+            "originalHeight": 535,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 299.2,
+            "y": 599.2
+          }
+        ],
+        "unplaced": [],
+        "freeRects": [
+          {
+            "x": 1248.4,
+            "y": 1043.4,
+            "width": 1191.6,
+            "height": 176.59999999999997
+          },
+          {
+            "x": 1997.6000000000001,
+            "y": 649.2,
+            "width": 442.3999999999999,
+            "height": 390
+          },
+          {
+            "x": 2236,
+            "y": 0,
+            "width": 203.99999999999983,
+            "height": 645
+          },
+          {
+            "x": 599.2,
+            "y": 1058.4,
+            "width": 645,
+            "height": 161.59999999999997
+          },
+          {
+            "x": 0,
+            "y": 1138.4,
+            "width": 595,
+            "height": 81.59999999999995
+          }
+        ],
+        "efficiency": 76.13376780435367,
+        "usedArea": 2266350,
+        "totalArea": 2976800,
+        "cuttingCount": 13,
+        "firstCutDirection": "HYBRID",
+        "cutDetails": [
+          {
+            "axis": "X",
+            "pos": 595,
+            "spanStart": 0,
+            "spanEnd": 1220,
+            "length": 1220,
+            "fullSpan": true,
+            "sourceRect": {
+              "x": 0,
+              "y": 0,
+              "width": 2440,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              595,
+              1840.8
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 595,
+            "spanStart": 0,
+            "spanEnd": 595,
+            "length": 595,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 0,
+              "y": 0,
+              "width": 2440,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              595,
+              620.8
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1004.2,
+            "spanStart": 0,
+            "spanEnd": 645,
+            "length": 645,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 599.2,
+              "y": 0,
+              "width": 1840.8,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              405,
+              1431.6
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 645,
+            "spanStart": 599.2,
+            "spanEnd": 2440,
+            "length": 1840.8,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 599.2,
+              "y": 0,
+              "width": 1840.8,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              645,
+              570.8
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1413.4,
+            "spanStart": 0,
+            "spanEnd": 645,
+            "length": 645,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1008.4000000000001,
+              "y": 0,
+              "width": 1431.6,
+              "height": 645
+            },
+            "pieceWidthsAfterCut": [
+              405,
+              1022.3999999999999
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1822.6000000000001,
+            "spanStart": 0,
+            "spanEnd": 645,
+            "length": 645,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1417.6000000000001,
+              "y": 0,
+              "width": 1022.3999999999999,
+              "height": 645
+            },
+            "pieceWidthsAfterCut": [
+              405,
+              613.1999999999998
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 2231.8,
+            "spanStart": 0,
+            "spanEnd": 645,
+            "length": 645,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1826.8000000000002,
+              "y": 0,
+              "width": 613.1999999999998,
+              "height": 645
+            },
+            "pieceWidthsAfterCut": [
+              405,
+              203.99999999999983
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1244.2,
+            "spanStart": 649.2,
+            "spanEnd": 1220,
+            "length": 570.8,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 599.2,
+              "y": 649.2,
+              "width": 1840.8,
+              "height": 570.8
+            },
+            "pieceWidthsAfterCut": [
+              645,
+              1191.6
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 1054.2,
+            "spanStart": 599.2,
+            "spanEnd": 1244.2,
+            "length": 645,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 599.2,
+              "y": 649.2,
+              "width": 1840.8,
+              "height": 570.8
+            },
+            "pieceWidthsAfterCut": [
+              405,
+              161.59999999999997
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1993.4,
+            "spanStart": 649.2,
+            "spanEnd": 1039.2,
+            "length": 390,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1248.4,
+              "y": 649.2,
+              "width": 1191.6,
+              "height": 570.8
+            },
+            "pieceWidthsAfterCut": [
+              745,
+              442.3999999999999
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 1039.2,
+            "spanStart": 1248.4,
+            "spanEnd": 2440,
+            "length": 1191.6,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1248.4,
+              "y": 649.2,
+              "width": 1191.6,
+              "height": 570.8
+            },
+            "pieceWidthsAfterCut": [
+              390,
+              176.59999999999997
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 295,
+            "spanStart": 599.2,
+            "spanEnd": 1134.2,
+            "length": 535,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 0,
+              "y": 599.2,
+              "width": 595,
+              "height": 620.8
+            },
+            "pieceWidthsAfterCut": [
+              295,
+              295.8
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 1134.2,
+            "spanStart": 0,
+            "spanEnd": 595,
+            "length": 595,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 0,
+              "y": 599.2,
+              "width": 595,
+              "height": 620.8
+            },
+            "pieceWidthsAfterCut": [
+              535,
+              81.59999999999995
+            ]
+          }
+        ]
+      },
+      {
+        "width": 2440,
+        "height": 1220,
+        "placed": [
+          {
+            "width": 390,
+            "height": 745,
+            "id": "0-1",
+            "originalId": 0,
+            "originalWidth": 390,
+            "originalHeight": 745,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "width": 390,
+            "height": 745,
+            "id": "0-2",
+            "originalId": 0,
+            "originalWidth": 390,
+            "originalHeight": 745,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 394.2,
+            "y": 0
+          },
+          {
+            "width": 790,
+            "height": 295,
+            "id": "2-0",
+            "originalId": 2,
+            "originalWidth": 295,
+            "originalHeight": 790,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 0,
+            "y": 749.2
+          },
+          {
+            "width": 790,
+            "height": 295,
+            "id": "2-1",
+            "originalId": 2,
+            "originalWidth": 295,
+            "originalHeight": 790,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 794.2,
+            "y": 749.2
+          },
+          {
+            "width": 295,
+            "height": 745,
+            "id": "3-0",
+            "originalId": 3,
+            "originalWidth": 295,
+            "originalHeight": 745,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 788.4000000000001,
+            "y": 0
+          },
+          {
+            "width": 295,
+            "height": 745,
+            "id": "3-1",
+            "originalId": 3,
+            "originalWidth": 295,
+            "originalHeight": 745,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 1087.6000000000001,
+            "y": 0
+          },
+          {
+            "width": 645,
+            "height": 295,
+            "id": "4-0",
+            "originalId": 4,
+            "originalWidth": 295,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": true,
+            "x": 1588.4,
+            "y": 749.2
+          },
+          {
+            "width": 295,
+            "height": 645,
+            "id": "4-1",
+            "originalId": 4,
+            "originalWidth": 295,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 1386.8000000000002,
+            "y": 0
+          },
+          {
+            "width": 295,
+            "height": 645,
+            "id": "4-2",
+            "originalId": 4,
+            "originalWidth": 295,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 1686.0000000000002,
+            "y": 0
+          },
+          {
+            "width": 295,
+            "height": 645,
+            "id": "4-3",
+            "originalId": 4,
+            "originalWidth": 295,
+            "originalHeight": 645,
+            "allowRotate": true,
+            "rotated": false,
+            "x": 1985.2000000000003,
+            "y": 0
+          }
+        ],
+        "unplaced": [],
+        "freeRects": [
+          {
+            "x": 0,
+            "y": 1048.4,
+            "width": 2440,
+            "height": 171.60000000000002
+          },
+          {
+            "x": 1386.8000000000002,
+            "y": 649.2,
+            "width": 1053.1999999999998,
+            "height": 95.8
+          },
+          {
+            "x": 2284.4,
+            "y": 0,
+            "width": 155.5999999999998,
+            "height": 645
+          },
+          {
+            "x": 2237.6,
+            "y": 749.2,
+            "width": 202.39999999999992,
+            "height": 295
+          }
+        ],
+        "efficiency": 75.51229508196722,
+        "usedArea": 2247850,
+        "totalArea": 2976800,
+        "cuttingCount": 13,
+        "firstCutDirection": "HYBRID",
+        "cutDetails": [
+          {
+            "axis": "X",
+            "pos": 390,
+            "spanStart": 0,
+            "spanEnd": 745,
+            "length": 745,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 0,
+              "y": 0,
+              "width": 2440,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              390,
+              2045.8
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 745,
+            "spanStart": 0,
+            "spanEnd": 2440,
+            "length": 2440,
+            "fullSpan": true,
+            "sourceRect": {
+              "x": 0,
+              "y": 0,
+              "width": 2440,
+              "height": 1220
+            },
+            "pieceWidthsAfterCut": [
+              745,
+              470.8
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 784.2,
+            "spanStart": 0,
+            "spanEnd": 745,
+            "length": 745,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 394.2,
+              "y": 0,
+              "width": 2045.8,
+              "height": 745
+            },
+            "pieceWidthsAfterCut": [
+              390.00000000000006,
+              1651.6
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 790,
+            "spanStart": 749.2,
+            "spanEnd": 1044.2,
+            "length": 295,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 0,
+              "y": 749.2,
+              "width": 2440,
+              "height": 470.8
+            },
+            "pieceWidthsAfterCut": [
+              790,
+              1645.8
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 1044.2,
+            "spanStart": 0,
+            "spanEnd": 2440,
+            "length": 2440,
+            "fullSpan": true,
+            "sourceRect": {
+              "x": 0,
+              "y": 749.2,
+              "width": 2440,
+              "height": 470.8
+            },
+            "pieceWidthsAfterCut": [
+              295,
+              171.60000000000002
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1584.2,
+            "spanStart": 749.2,
+            "spanEnd": 1044.2,
+            "length": 295,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 794.2,
+              "y": 749.2,
+              "width": 1645.8,
+              "height": 295
+            },
+            "pieceWidthsAfterCut": [
+              790,
+              851.5999999999999
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1083.4,
+            "spanStart": 0,
+            "spanEnd": 745,
+            "length": 745,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 788.4000000000001,
+              "y": 0,
+              "width": 1651.6,
+              "height": 745
+            },
+            "pieceWidthsAfterCut": [
+              295,
+              1352.3999999999999
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1382.6000000000001,
+            "spanStart": 0,
+            "spanEnd": 745,
+            "length": 745,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1087.6000000000001,
+              "y": 0,
+              "width": 1352.3999999999999,
+              "height": 745
+            },
+            "pieceWidthsAfterCut": [
+              295,
+              1053.1999999999998
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 2233.4,
+            "spanStart": 749.2,
+            "spanEnd": 1044.2,
+            "length": 295,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1588.4,
+              "y": 749.2,
+              "width": 851.5999999999999,
+              "height": 295
+            },
+            "pieceWidthsAfterCut": [
+              645,
+              202.39999999999992
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1681.8000000000002,
+            "spanStart": 0,
+            "spanEnd": 645,
+            "length": 645,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1386.8000000000002,
+              "y": 0,
+              "width": 1053.1999999999998,
+              "height": 745
+            },
+            "pieceWidthsAfterCut": [
+              295,
+              753.9999999999998
+            ]
+          },
+          {
+            "axis": "Y",
+            "pos": 645,
+            "spanStart": 1386.8000000000002,
+            "spanEnd": 2440,
+            "length": 1053.1999999999998,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1386.8000000000002,
+              "y": 0,
+              "width": 1053.1999999999998,
+              "height": 745
+            },
+            "pieceWidthsAfterCut": [
+              645,
+              95.8
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 1981.0000000000002,
+            "spanStart": 0,
+            "spanEnd": 645,
+            "length": 645,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1686.0000000000002,
+              "y": 0,
+              "width": 753.9999999999998,
+              "height": 645
+            },
+            "pieceWidthsAfterCut": [
+              295,
+              454.7999999999998
+            ]
+          },
+          {
+            "axis": "X",
+            "pos": 2280.2000000000003,
+            "spanStart": 0,
+            "spanEnd": 645,
+            "length": 645,
+            "fullSpan": false,
+            "sourceRect": {
+              "x": 1985.2000000000003,
+              "y": 0,
+              "width": 454.7999999999998,
+              "height": 645
+            },
+            "pieceWidthsAfterCut": [
+              295,
+              155.5999999999998
+            ]
+          }
+        ]
+      }
+    ],
+    "unplaced": [],
+    "totalEfficiency": 75.82303144316043,
+    "mode": "auto",
+    "engine": "AREA_TARGET_HYBRID"
+  },
+  "cost": {
+    "totalCuttingCost": 39000,
+    "totalCuts": 26,
+    "billableCuts": 26,
+    "usageRate": 75.82,
+    "panelCount": 2,
+    "trimCuts": 0
+  }
+}
