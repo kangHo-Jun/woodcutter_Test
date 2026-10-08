@@ -49,7 +49,7 @@ for (const scenario of scenarios) {
     });
 }
 
-test('CASE11 [임시 설정]: A/B/C 세로 보존 + D 3세로/1가로를 한 장에서 절단', () => {
+test.skip('CASE11 [보관: 표시 버그로 범위 변경, 1장 목표 폐기]: A/B/C 세로 보존 + D 3세로/1가로를 한 장에서 절단', () => {
     // Diagnostic RED only: 4.2mm is an assumption, not a confirmed photo setting.
     // Do not weaken kerf/geometry checks or claim this RED proves an engine bug.
     const run = runScenario(case11);

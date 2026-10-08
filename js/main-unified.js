@@ -11,6 +11,7 @@ class WoodcutterApp {
         this.isMobile = window.innerWidth < 1024;
         this.renderer = null;
         this.groupCanvases = []; // 그룹별 캔버스 저장
+        this.residualDisplayContext = new WeakMap(); // rendering metadata only; results stay immutable
     }
 
     /**
@@ -611,6 +612,10 @@ class WoodcutterApp {
                 alert(`${result.unplaced.length}개의 부품을 배치할 수 없습니다. 부품 크기를 확인하세요.`);
             }
 
+            for (const bin of result.bins) {
+                this.residualDisplayContext.set(bin, { kerf: settings.kerf,
+                    board: { width: packerW, height: packerH } });
+            }
             this.state.setResult(result);
 
             const labeledGroups = LabelingEngine.assignLabels(this.state.cuttingList);
@@ -1033,105 +1038,14 @@ class WoodcutterApp {
         ctx.fillText(`${boardWidth} mm`, 0, 0);
         ctx.restore();
 
-        // === 잔여 영역 치수 표시 (freeRects 기반) ===
-        const MIN_AREA = 20000; // 20,000mm² 이상만 표시
-        const displayFreeRects = this.buildDisplayFreeRects(renderedPlaced, renderBoardWidth, renderBoardHeight);
-
-        displayFreeRects.forEach(rect => {
-            // packer 기준: x=길이방향, y=폭방향
-            // 렌더링 기준: x=길이방향(가로), y=폭방향(세로)
-            const rw = rect.width;
-            const rh = rect.height;
-            const rx = rect.x;
-            const ry = rect.y;
-
-            // 면적 조건
-            if (rw * rh < MIN_AREA) return;
-
-            const rxPx = padding + rx * drawScale;
-            const ryPx = padding + ry * drawScale;
-            const rwPx = rw * drawScale;
-            const rhPx = rh * drawScale;
-
-            ctx.fillStyle = 'rgba(0,0,0,0.4)';
-            ctx.font = 'bold 13px "Noto Sans KR", sans-serif';
-
-            // 가로 치수 (상단 중앙)
-            if (rw >= 50) {
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                ctx.fillText(`${Math.round(rw)}`, rxPx + rwPx / 2, ryPx + 4);
-            }
-
-            // 세로 치수 (좌측 중앙, 90도 회전)
-            if (rh >= 50) {
-                ctx.save();
-                ctx.translate(rxPx + 12, ryPx + rhPx / 2);
-                ctx.rotate(-Math.PI / 2);
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(`${Math.round(rh)}`, 0, 0);
-                ctx.restore();
-            }
-        });
-    }
-
-    buildDisplayFreeRects(placed, boardWidth, boardHeight) {
-        const xEdges = new Set([0, boardWidth]);
-        const yEdges = new Set([0, boardHeight]);
-
-        placed.forEach(part => {
-            xEdges.add(part.x);
-            xEdges.add(part.x + part.width);
-            yEdges.add(part.y);
-            yEdges.add(part.y + part.height);
-        });
-
-        const xs = Array.from(xEdges).sort((a, b) => a - b);
-        const ys = Array.from(yEdges).sort((a, b) => a - b);
-        const freeRects = [];
-
-        for (let yi = 0; yi < ys.length - 1; yi++) {
-            const y0 = ys[yi];
-            const y1 = ys[yi + 1];
-            const h = y1 - y0;
-            if (h <= 0) continue;
-
-            let current = null;
-            for (let xi = 0; xi < xs.length - 1; xi++) {
-                const x0 = xs[xi];
-                const x1 = xs[xi + 1];
-                const w = x1 - x0;
-                if (w <= 0) continue;
-
-                const cx = x0 + w / 2;
-                const cy = y0 + h / 2;
-                const occupied = placed.some(part =>
-                    cx >= part.x && cx <= part.x + part.width &&
-                    cy >= part.y && cy <= part.y + part.height
-                );
-
-                if (occupied) {
-                    if (current) {
-                        freeRects.push(current);
-                        current = null;
-                    }
-                    continue;
-                }
-
-                if (current) {
-                    current.width += w;
-                } else {
-                    current = { x: x0, y: y0, width: w, height: h };
-                }
-            }
-
-            if (current) {
-                freeRects.push(current);
-            }
-        }
-
-        return freeRects;
+        // Presentation only. The engine result, cutting count and cost are unchanged.
+        const context = this.residualDisplayContext.get(bin);
+        const display = window.ResidualLabels.build({ bin,
+            board: context?.board || { width: bin.width || renderBoardWidth, height: bin.height || renderBoardHeight },
+            kerf: context?.kerf ?? this.state.settings.kerf });
+        const drawing = window.ResidualLabels.draw(ctx, display, { scale: drawScale, padding });
+        this.lastResidualLabelIssues = [...display.unresolved, ...drawing.issues];
+        if (this.lastResidualLabelIssues.length) console.warn('잔재 표시 확인 필요', this.lastResidualLabelIssues);
     }
 
     getAxisMinResiduals(bin, boardWidth, boardHeight) {

@@ -1,0 +1,50 @@
+{
+  "id": "CASE11",
+  "purpose": "기존2장 배치를 유지하며 톱날 반영 잔재 정수표시",
+  "status": "톱날4.2 표시버그 재현 fixture",
+  "board": {
+    "width": 910,
+    "height": 1820,
+    "thickness": 18
+  },
+  "settings": {
+    "kerf": 4.2,
+    "mode": "auto",
+    "considerGrain": false,
+    "enableTrim": false
+  },
+  "items": [
+    {
+      "id": "A",
+      "width": 685,
+      "height": 840,
+      "qty": 1,
+      "allowRotate": true
+    },
+    {
+      "id": "B",
+      "width": 300,
+      "height": 840,
+      "qty": 1,
+      "allowRotate": true
+    },
+    {
+      "id": "C",
+      "width": 173,
+      "height": 840,
+      "qty": 1,
+      "allowRotate": true
+    },
+    {
+      "id": "D",
+      "width": 195,
+      "height": 650,
+      "qty": 4,
+      "allowRotate": true
+    }
+  ],
+  "expected": {
+    "bins": 2
+  },
+  "fixtureNotes": "사진의 부품 규격과 톱날4.2 표시 검토 조건을 고정한 회귀 입력. 원본 사진의 모든 설정을 복원했다는 의미는 아님."
+}

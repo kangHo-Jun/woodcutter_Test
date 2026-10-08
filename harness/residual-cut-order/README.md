@@ -1,3 +1,7 @@
+> 2026-10-08 사용자 범위 변경: 신규 1장 배치가 아니라 잔재표시 버그를 수정한다.
+> 이 폴더의 최초 CASE11 목표는 보관용이며 skip 처리했다. 현행 11사례 검증은
+> `node --test harness/residual-labels/eleven-cases.test.js`이다. 과거 실패 근거는 아래에 보존한다.
+
 # CASE1~11 절단 순서 검증 준비
 
 실행 (woodcutter_Test 루트):
