@@ -1,0 +1,15 @@
+{
+  "id": "CASE11",
+  "purpose": "A/B/C 세로 분리 후 오른쪽 잔재에서 D 세로 3개와 가로 1개",
+  "status": "PROVISIONAL: 사진의 설정과 마지막 조각 치수 확인 전 진단용 입력",
+  "board": { "width": 910, "height": 1820, "thickness": 18 },
+  "settings": { "kerf": 4.2, "mode": "auto", "considerGrain": false, "enableTrim": false },
+  "items": [
+    { "id": "A", "width": 685, "height": 840, "qty": 1, "allowRotate": true },
+    { "id": "B", "width": 300, "height": 840, "qty": 1, "allowRotate": true },
+    { "id": "C", "width": 173, "height": 840, "qty": 1, "allowRotate": true },
+    { "id": "D", "width": 195, "height": 650, "qty": 4, "allowRotate": true }
+  ],
+  "expected": { "bins": 1, "verticalD": 3, "horizontalD": 1 },
+  "unconfirmed": ["kerf", "mode", "considerGrain", "enableTrim", "rotation permissions", "thickness", "last piece is D650x195 or separate654x195"]
+}

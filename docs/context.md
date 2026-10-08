@@ -1,7 +1,31 @@
 # context.md — 현재 진행 상황
 
 ## 최종 업데이트
-2026-09-28
+2026-10-08
+
+## 2026-10-08 — 잔재 숫자 표시 버그 수정 계획 (현재 우선 작업)
+
+- 사용자 범위 변경: 새1장 배치 대신 화면의 실제 잔재 숫자만 수정하는 방안·영향 조사 요청. 기존 배치/절단/요금 변경 금지. 아직 구현 요청 단계 아님.
+- Test 실제 pack+buildDisplayFreeRects 재실행: 표시654×190/1820×70/56×650, 실제 freeRects649.4×185.8/1820×65.8/51.8×650(kerf4.2). output/residual-label-audit/audit.jsonl 보관.
+- 주 도면 main-unified1038/1063/1073/1079가 수정 지점. 일반PDF·미리보기는 같은Canvas 복사. 반복배치 비교창은 잔재 숫자 미표시. getAxisMinResiduals/buildFreeRects는 현재 호출 없음 확인.
+- 호환성 발견: CASE2 GPP freeRects=[]이며 일부 최종 절단도 cutDetails 미기록; horizontal은 freeRects/cutDetails/판재치수 필드 부재. 단순 잔재목록 교체/전체치수에서4.2차감 금지. 호환성 해결 전 배포 불가.
+- 계획: woodcutter_Test/docs/superpowers/plans/2026-10-08-residual-labels.md. 표시 전용 모듈+main 숫자 연결+index 자산버전 범위, 엔진/요금/상태/배치 고정. 11사례 불변+잔재표시+실브라우저/PDF TDD 계획.
+- 이전 residual-cut-order CASE11의1장RED는 현재 완료조건 아님. 기존 진단 파일 미변경, 구현 시 범위전환 명시 후 표시CASE11 별도 작성. 원본설정 질의는 더 이상 표시버그 계획 수립의 차단요건 아님.
+- 생산 코드/V4/V10 미수정. 다음은 이 계획에 따른 Test 표시 TDD이며 기존 배치개선 계획으로 돌아가지 않는다.
+
+
+
+## 2026-10-08 — CASE11 테스트 우선 준비 (원본 설정 확인 대기)
+
+- 사용자 절대 조건: Test에서 먼저 TDD, 기존10개 배치/절단 보존, 새 후보 추가 방식. 검증·승인 후에만 V4/V10 반영.
+- 로컬 복원 태그 `tdd-case11-before-20261008` 생성(HEAD3f38bb5). 기존 미추적 docs/추가개발가이드.md 및 output 보존. 원격 push 없음.
+- `harness/residual-cut-order/case11.json`, `eleven-cases.test.js`, README 추가. 기존10개 fixture/저장된 engine baseline은 미수정. pack+비용+approvedDefaultResult 공개 경계 검증.
+- 11개 실행 결과10PASS/1FAIL(약5.1초): 기존10개의 배치/잔재/절단/요금 정확히 동일, CASE5 승인4줄/20회/30000원 추가 보호. CASE11은 기대1장/실제2장.
+- CASE11은 톱날4.2/회전ON/결OFF/전단OFF/자동/두께18 임시 설정이며 원본 설정 미확정. 사진의 마지막 조각 D650×195인지 별도654×195인지 질의함. 이 RED는 확정된 버그 재현이 아님. ABC 세로 유지 시 실폭649.4로650 부족하므로 조건을 무시한 GREEN 금지.
+- 별도 기존 baseline/default-adoption21테스트도 모두PASS. 프로그램 js 및 V4/V10 미수정. 실제 브라우저/PDF는 이번 단계 미검증.
+- 다음: 원본 설정 답변 수신 후 CASE11 조건 확정, 가능한 절단 순서의 RED를 확보한 다음 추가 후보 구현. 새로운 로직 구현 완료 또는 11개 GREEN이라고 보고하지 않음.
+
+
 
 ## 2026-09-28 — CASE5 구버전 스크립트 캐시 방어
 - 사용자가 보고한 오래된 16회 엇갈린 결과를 확인. 현재 코드로 새로고침 후 같은 UI 입력을 계산하면 CASE5 기본 결과가 4줄450/450/350/350, 20회로 생성된다. 관찰된 문제는 새로고침 전 이미 열린 페이지 상태였으며, 서버가 새로고침 중 구 JS를 반환했다는 직접 증거는 확인되지 않았다.
