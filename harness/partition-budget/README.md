@@ -9,6 +9,7 @@ From `woodcutter_Test`:
 ```sh
 node --test harness/partition-budget/partition-budget.test.js
 PACKER_ROOT=../woodcutter_v10 node --test harness/partition-budget/partition-budget.test.js
+PACKER_ROOT=../woodcutter_v4 node --test harness/partition-budget/partition-budget.test.js
 node --test harness/residual-labels/*.test.js harness/repeated-layout/*.test.js harness/pdf-size/*.test.js harness/bulk-performance/*.test.js
 node harness/regression.js
 ```
@@ -28,7 +29,13 @@ Playwright packages, then run:
 ```sh
 node harness/partition-budget/browser-check.cjs Test
 node harness/partition-budget/browser-check.cjs v10
+node harness/partition-budget/browser-check.cjs v4
 ```
+
+For post-deploy validation, set `PUBLIC_URL` to the target's GitHub Pages URL.
+Those artifacts go under `output/partition-budget/public/<version>`.
+The v4 path explicitly preserves its fixed 14mm trim and default 4.2mm kerf
+(v4 has no editable kerf field).
 
 Each version checks eleven immutable pre-change browser results/costs and
 actual form entry of the reported case at desktop and mobile viewport sizes.
@@ -47,4 +54,5 @@ engine or arbitrary-size order always completes within one second.
 Evidence from 2026-10-13: `output/partition-budget/red.txt` records the three
 original timeout failures; `green.txt`, `existing-tests.txt`, `regression.txt`,
 `v10-tests.txt`, and browser result folders record the passing checks.
-Rollback tags: `freeze-before-20261013` in both Test and v10. No v4 changes.
+Rollback tags: `freeze-before-20261013` in Test, v10, and v4. The user's later
+explicit all-version rollout request authorized v4 after the initial v10 fix.

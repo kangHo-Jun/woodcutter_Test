@@ -13,6 +13,9 @@ function scenario(count = 24, settings = {}) {
 }
 function runtime(input = scenario(), clock) {
     const data = prepareCase(input);
+    if (path.basename(target) === 'woodcutter_v4' && input.settings.enableTrim) {
+        data.board.width = input.board.width - 14;
+    }
     installBrowserStubs({ ...data.settings, boardThickness: data.board.thickness });
     let clockReads = 0;
     const Clock = clock ? class extends Date { static now() { return clock(++clockReads); } } : Date;

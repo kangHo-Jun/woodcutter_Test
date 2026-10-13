@@ -7,9 +7,9 @@ const { scenario } = require('./runtime.cjs');
 const scenarios = [...require('../repeated-layout/cases.json'), require('../residual-labels/case11.json')];
 const target = process.argv[2] || 'Test';
 const baseline = require(`../residual-labels/baselines/${target}.json`);
-const out = path.resolve(__dirname, '../../output/partition-budget', target);
+const out = path.resolve(__dirname, '../../output/partition-budget', process.env.PUBLIC_URL ? 'public' : '.', target);
 fs.mkdirSync(out, { recursive: true });
-const url = `http://127.0.0.1:8893/woodcutter_${target}/`;
+const url = process.env.PUBLIC_URL || `http://127.0.0.1:8893/woodcutter_${target}/`;
 (async () => {
     const browser = await chromium.launch({ headless: true });
     const errors = [], results = [];
@@ -68,6 +68,7 @@ const url = `http://127.0.0.1:8893/woodcutter_${target}/`;
                 d.items.forEach(item => appState.addPart({ ...item, rotatable: item.allowRotate }));
             }, s);
             const data = await calculate(page), old = baseline.cases.find(c => c.id === s.id), prepared = prepareCase(s);
+            if (target === 'v4' && s.settings.enableTrim) prepared.board.width = s.board.width - 14;
             assert.deepEqual(visibleResult(data.result), visibleResult(old.result), s.id + ' layout');
             assert.deepEqual(data.cost, old.cost, s.id + ' cost');
             assertValid({ caseData: prepared, items: prepared.items, result: data.result });
@@ -78,7 +79,12 @@ const url = `http://127.0.0.1:8893/woodcutter_${target}/`;
         await page.close();
         for (const mobile of [false, true]) {
             const p = await pageFor(mobile ? { width: 390, height: 844 } : { width: 1600, height: 1100 });
-            for (const [id, val] of Object.entries({ boardWidth: '1220', boardHeight: '2440', boardThickness: '18', kerfInput: '4.2' })) await p.locator('#' + id).fill(val);
+            for (const [id, val] of Object.entries({ boardWidth: '1220', boardHeight: '2440', boardThickness: '18', kerfInput: '4.2' })) {
+                if (target === 'v4' && id === 'kerfInput') {
+                    assert.equal(await p.locator('#kerfInput').count(), 0);
+                    assert.equal(await p.evaluate(() => SettingsManager.DEFAULT_SETTINGS.kerf), 4.2);
+                } else await p.locator('#' + id).fill(val);
+            }
             await p.locator('#considerGrain').uncheck();
             await p.locator('#enableTrim').uncheck();
             await p.locator('#partRotatable').check();
