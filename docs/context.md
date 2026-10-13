@@ -1,7 +1,18 @@
 # context.md — 현재 진행 상황
 
 ## 최종 업데이트
-2026-10-08
+2026-10-13
+
+## 2026-10-13 — v10 배포 승인
+
+- 사용자 `배포하라`로 v10 운영 배포 진행. Test의 검증 코드와 회귀테스트는 로컬 커밋으로 보관하며 이번 운영 배포 대상은v10이다. 공개검증 최종결과는 상위HANDOFF.md에 기록한다.
+
+## 2026-10-13 — GPP 계산 멈춤 수정 및 v10 로컬 반영
+
+- 사용자 추가진행으로 Test TDD 후 v10에 packer/index만 이식. 1장전량배치시GPP생략,50,000부분집합/내부1초검사/노드예산초과시baseline복귀,상위4후보저장,31개이상비트마스크방어.
+- 신규23/23(Test/v10각각),기존70/70,regression8/8PASS. 브라우저Test/v10각13사례/PDF각13개PASS. 원본24개v10계산4~5ms,1장전량배치,표시약75ms. 기존11사례배치/절단/잔재/요금보존.
+- 독립리뷰차단사항없음. 롤백태그freeze-before-20261013. 계획docs/superpowers/plans/2026-10-13-partition-budget.md, 재현harness/partition-budget/README.md, 증거output/partition-budget/.
+- v4미수정. 커밋/푸시/실제배포대기. 기존작업파일보존. 상세미해결사항과한계는상위HANDOFF참조.
 
 ## 2026-10-08 — 잔재 치수 표시 수정 및 Test → V4/V10 이식 완료
 

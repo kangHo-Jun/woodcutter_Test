@@ -184,7 +184,10 @@ class GuillotinePacker {
             selectedEngine = 'COLUMN_RESIDUAL_FILL';
         }
 
-        const partitionCandidate = this.guillotinePartitionPlanner(
+        // GPP is accepted only when it reduces board count; one full board
+        // cannot be improved by this search (and needs no subset enumeration).
+        const partitionCandidate = selectedUnplaced.length === 0 && selectedBins.length === 1
+            ? null : this.guillotinePartitionPlanner(
             items,
             this.binWidth,
             this.binHeight,
@@ -2812,6 +2815,9 @@ class AdaptiveGuillotineBin {
         const cutCandidates = 12;
         const nodeBudgetPerBoard = 500;
         const hardTimeoutMs = 1000;
+        const subsetBudget = 50000;
+        const searchExhausted = Symbol('partition search exhausted');
+        let testedSubsets = 0;
         const startedAt = Date.now();
         const helper = new AdaptiveGuillotineBin(boardW, boardH, this.kerf);
 
@@ -2837,6 +2843,15 @@ class AdaptiveGuillotineBin {
         const normalizedParts = normalizeParts();
         const expandedItems = this.expandItems(normalizedParts, false);
         const baseline = this.packAdaptiveBase(expandedItems);
+        const baselineResult = {
+            bins: baseline.bins,
+            unplaced: baseline.unplaced,
+            totalEfficiency: this.calculateTotalEfficiency(baseline.bins),
+            engine: baseline.engine || 'baseline'
+        };
+        // JS bitwise operators wrap at 32 bits. Keep the optional search in
+        // its representable range; large orders retain their existing layout.
+        if (expandedItems.length > 30) return baselineResult;
         const boardArea = boardW * boardH;
         const totalArea = expandedItems.reduce((sum, item) => sum + (item.width * item.height), 0);
         const targetBinCount = Math.max(1, Math.ceil(totalArea / boardArea));
@@ -2964,10 +2979,10 @@ class AdaptiveGuillotineBin {
                 return useFallbackRect({ rect, items });
             }
             if (timeExceeded()) {
-                return useFallbackRect({ rect, items });
+                throw searchExhausted;
             }
             if (visitedStates > nodeBudgetPerBoard) {
-                return useFallbackRect({ rect, items });
+                throw searchExhausted;
             }
             if (!items || items.length === 0) {
                 return {
@@ -3073,6 +3088,11 @@ class AdaptiveGuillotineBin {
                 if (!split) return;
 
                 for (let submask = 1; submask < allMask; submask++) {
+                    testedSubsets += 1;
+                    if (testedSubsets > subsetBudget ||
+                        ((testedSubsets - 1) % 64 === 0 && timeExceeded())) {
+                        throw searchExhausted;
+                    }
                     const leftItems = [];
                     const rightItems = [];
                     for (let i = 0; i < items.length; i++) {
@@ -3089,13 +3109,19 @@ class AdaptiveGuillotineBin {
 
                     const fillScore = Math.min(rectArea(split.first), remainingArea(leftItems)) +
                         Math.min(rectArea(split.second), remainingArea(rightItems));
-                    attempts.push({
+                    const attempt = {
                         candidate,
                         split,
                         leftItems,
                         rightItems,
                         score: fillScore
-                    });
+                    };
+                    // Equivalent to a stable descending sort followed by
+                    // slice(0, beamWidth), without retaining every partition.
+                    const index = attempts.findIndex(existing => existing.score < fillScore);
+                    if (index !== -1) attempts.splice(index, 0, attempt);
+                    else if (attempts.length < beamWidth) attempts.push(attempt);
+                    if (attempts.length > beamWidth) attempts.pop();
                 }
             });
 
@@ -3145,15 +3171,22 @@ class AdaptiveGuillotineBin {
 
         let remaining = [...expandedItems];
         const bins = [];
-        for (let boardIndex = 0; boardIndex < targetBinCount && remaining.length > 0; boardIndex++) {
-            const boardResult = solveRect({ x: 0, y: 0, width: boardW, height: boardH }, remaining, 0);
-            if (!boardResult.placed || boardResult.placed.length === 0) {
-                break;
-            }
+        try {
+            for (let boardIndex = 0; boardIndex < targetBinCount && remaining.length > 0; boardIndex++) {
+                const boardResult = solveRect({ x: 0, y: 0, width: boardW, height: boardH }, remaining, 0);
+                if (!boardResult.placed || boardResult.placed.length === 0) {
+                    break;
+                }
 
-            bins.push(materializeBin(boardResult));
-            const placedIds = new Set(boardResult.placed.map(item => item.id));
-            remaining = remaining.filter(item => !placedIds.has(item.id));
+                bins.push(materializeBin(boardResult));
+                const placedIds = new Set(boardResult.placed.map(item => item.id));
+                remaining = remaining.filter(item => !placedIds.has(item.id));
+            }
+        } catch (error) {
+            if (error !== searchExhausted) throw error;
+            // Discard incomplete search, including partial boards, and keep
+            // the complete baseline. Do not select a deadline-dependent prefix.
+            return baselineResult;
         }
 
         const candidate = {
@@ -3167,12 +3200,7 @@ class AdaptiveGuillotineBin {
             return candidate;
         }
 
-        return {
-            bins: baseline.bins,
-            unplaced: baseline.unplaced,
-            totalEfficiency: this.calculateTotalEfficiency(baseline.bins),
-            engine: baseline.engine || 'baseline'
-        };
+        return baselineResult;
     }
 
     collectStripSizes(items, maxPrimarySize, crossSize, direction) {
