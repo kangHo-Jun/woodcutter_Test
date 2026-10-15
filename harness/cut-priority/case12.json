@@ -1,0 +1,11 @@
+{
+  "id": "CASE12",
+  "board": {"width": 1220, "height": 2440, "thickness": 18},
+  "settings": {"kerf": 4.2, "enableTrim": false, "trimMargin": 9, "considerGrain": false, "mode": "auto", "cutPrice": 1500},
+  "items": [
+    {"id": "A", "width": 546, "height": 850, "qty": 1, "allowRotate": true},
+    {"id": "B", "width": 260, "height": 850, "qty": 2, "allowRotate": true},
+    {"id": "C", "width": 396, "height": 400, "qty": 6, "allowRotate": true},
+    {"id": "D", "width": 396, "height": 364, "qty": 6, "allowRotate": true}
+  ]
+}

@@ -42,6 +42,8 @@ class WoodcutterApp {
 
         // 상태 변경 리스너
         this.state.subscribe('cuttingList', () => this.renderPartsList());
+        this.state.subscribe('result', () => this.updateCutPriorityStatus());
+        this.state.subscribe('settings', () => this.updateCutPriorityStatus());
 
         // Init complete
     }
@@ -120,6 +122,15 @@ class WoodcutterApp {
         if (calculateBtn) {
             calculateBtn.addEventListener('click', () => this.handleCalculate());
         }
+        ['priorityHorizontal', 'priorityVertical'].forEach(id => {
+            const choice = document.getElementById(id);
+            if (choice) choice.addEventListener('change', () => {
+                if (!choice.checked) return;
+                document.getElementById('cutDirection').value = choice.value;
+                this.saveSettings();
+                this.updateCutPriorityStatus();
+            });
+        });
 
         // PDF buttons
         const downloadPdfBtn = document.getElementById('downloadPdfBtn');
@@ -201,6 +212,8 @@ class WoodcutterApp {
         if (panel === 'left') leftPanel.classList.add('active');
         else if (panel === 'center') centerPanel.classList.add('active');
         else if (panel === 'right') rightPanel.classList.add('active');
+        // A long input form must not leave the next panel under the sticky tabs.
+        if (this.isMobile) window.scrollTo(0, 0);
     }
 
     /**
@@ -587,13 +600,15 @@ class WoodcutterApp {
                 return;
             }
 
-            // cutDirection: 'horizontal' | 'auto'
+            // UI "가로 절단 우선" deliberately preserves the existing auto path.
             const mode = settings.cutDirection || 'auto';
-            let result = packer.pack(items, mode);
+            let result = mode === 'vertical'
+                ? window.VerticalStripPacker.pack({ board: { width: packerW, height: packerH }, kerf: settings.kerf, items })
+                : packer.pack(items, mode);
 
             // The approved customer drawing is the only current production
             // adoption. Keep every other layout on the packer's baseline path.
-            if (window.RepeatedLayout?.approvedDefaultResult) {
+            if (mode !== 'vertical' && window.RepeatedLayout?.approvedDefaultResult) {
                 result = window.RepeatedLayout.approvedDefaultResult({
                     board: { width: packerW, height: packerH },
                     kerf: settings.kerf,
@@ -649,6 +664,7 @@ class WoodcutterApp {
      * 결과 표시
      */
     displayResults() {
+        this.updateCutPriorityStatus();
         const emptyState = document.getElementById('emptyState');
         const canvasControlsTop = document.getElementById('canvasControlsTop');
         const canvasScrollContainer = document.getElementById('canvasScrollContainer');
@@ -665,6 +681,30 @@ class WoodcutterApp {
 
         // 그룹별 대표 도면 렌더링 (display:block 반영 후 다음 프레임에 실행)
         requestAnimationFrame(() => this.renderGroupCanvases());
+    }
+
+    cutPriorityLabel(result = this.state.result) {
+        return result?.mode === 'vertical' ? '세로 절단 우선' : '가로 절단 우선';
+    }
+
+    updateCutPriorityStatus() {
+        const status = document.getElementById('cutPriorityStatus');
+        const summary = document.getElementById('resultCutPriority');
+        const inputHint = document.getElementById('cutPriorityPending');
+        const result = this.state.result;
+        if (inputHint) inputHint.hidden = true;
+        if (summary) summary.textContent = result ? this.cutPriorityLabel(result) : '';
+        if (!status) return;
+        status.hidden = !result;
+        if (!result) return;
+        const selected = document.getElementById('cutDirection')?.value === 'vertical' ? 'vertical' : 'auto';
+        const calculated = result.mode === 'vertical' ? 'vertical' : 'auto';
+        const pending = selected !== calculated;
+        if (inputHint) inputHint.hidden = !pending;
+        status.dataset.pending = String(pending);
+        status.textContent = pending
+            ? `절단 방식이 변경되었습니다. 재계산이 필요합니다. 현재 도면·PDF: ${this.cutPriorityLabel(result)}`
+            : `현재 도면: ${this.cutPriorityLabel(result)}`;
     }
 
     /**
@@ -1225,6 +1265,7 @@ class WoodcutterApp {
         ctx.fillText(`크기: ${exportState.boardSpec.width} × ${exportState.boardSpec.height} mm`, margin + 20, y);
         y += 30;
         ctx.fillText(`결 고려: ${exportState.boardSpec.considerGrain ? '예' : '아니오'}`, margin + 20, y);
+        ctx.fillText(`절단 방식: ${this.cutPriorityLabel(exportState.result)}`, margin + 240, y);
         y += 50;
 
         // 최적화 결과
@@ -1351,7 +1392,7 @@ class WoodcutterApp {
         const title = count > 1 ? `패턴 ${index + 1} (${count}장 동일)` : `패턴 ${index + 1}`;
         const settings = exportState.settings || { enableTrim: true };
         const trimStatus = settings.enableTrim ? '전단(O)' : '전단(X)';
-        const cutInfo = `절단: ${bin.cuttingCount}회  |  ${trimStatus}`;
+        const cutInfo = `절단: ${bin.cuttingCount}회  |  ${trimStatus}  |  ${this.cutPriorityLabel(exportState.result)}`;
 
         // 부품 사이즈와 개수 계산
         const labeledGroups = exportState.labeledGroups || [];
@@ -1465,6 +1506,10 @@ class WoodcutterApp {
             document.getElementById('boardThickness').value = '18';
             document.getElementById('considerGrain').checked = false;
             document.getElementById('enableTrim').checked = false;
+            document.getElementById('cutDirection').value = 'auto';
+            document.getElementById('priorityHorizontal').checked = true;
+            document.getElementById('priorityVertical').checked = false;
+            this.saveSettings();
             this.updateTrimWarning();
 
             this.renderPartsList();
@@ -1556,10 +1601,11 @@ class WoodcutterApp {
                     this.state.cuttingList = project.parts || [];
                     this.state.update('cuttingList', this.state.cuttingList);
 
-                    if (project.settings) {
-                        this.state.updateSettings(project.settings);
+                    {
+                        const loadedSettings = { ...SettingsManager.DEFAULT_SETTINGS, ...project.settings };
                         if (window.SettingsManager) {
-                            SettingsManager.applyToUI(project.settings);
+                            SettingsManager.applyToUI(loadedSettings);
+                            this.state.updateSettings(SettingsManager.readFromUI());
                             this.updateTrimWarning();
                         }
                     }

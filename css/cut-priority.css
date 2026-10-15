@@ -1,0 +1,13 @@
+.cut-priority { border: 0; padding: 0; margin: 4px 0 16px; min-width: 0; }
+.cut-priority legend { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+.cut-priority-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.cut-priority-options label { cursor: pointer; position: relative; min-width: 0; }
+.cut-priority-options input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.cut-priority-options span { display: flex; flex-direction: column; justify-content: center; min-height: 66px; padding: 10px 4px; text-align: center; border: 1px solid #cbd5e0; border-radius: 8px; color: #4a5568; font-size: 14px; font-weight: 600; }
+.cut-priority-options small { display: block; font-size: 11px; font-weight: 400; margin-top: 4px; }
+.cut-priority-options input:checked + span { border: 2px solid #25815c; padding: 9px 3px; background: #edf8f1; color: #1c6347; }
+.cut-priority-options input:focus-visible + span { outline: 3px solid #2574b8; outline-offset: 3px; }
+.cut-priority-help { font-size: 11px; color: #596775; line-height: 1.7; margin-top: 8px; }
+.cut-priority-status { flex-shrink: 0; margin: 12px 16px 0; padding: 10px 12px; border: 1px solid #cce4d6; border-radius: 6px; background: #f1f8f4; color: #24583f; font-size: 13px; line-height: 1.6; }
+.cut-priority-status[data-pending="true"] { color: #784c13; background: #fff8e8; border-color: #e6c98d; }
+.cut-priority-result { color: #4a5568; font-size: 13px; margin-bottom: 10px; }

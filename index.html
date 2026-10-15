@@ -12,6 +12,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/responsive-style.css">
+    <link rel="stylesheet" href="css/cut-priority.css?v=20261015-1">
 
     <!-- jsPDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -215,6 +216,16 @@
                 </div>
             </section>
 
+            <fieldset class="cut-priority">
+                <legend>절단 우선 방향</legend>
+                <input type="hidden" id="cutDirection" value="auto">
+                <div class="cut-priority-options">
+                    <label><input type="radio" name="cutPriority" id="priorityHorizontal" value="auto" checked><span>가로 절단 우선<small>기본 방식</small></span></label>
+                    <label><input type="radio" name="cutPriority" id="priorityVertical" value="vertical"><span>세로 절단 우선<small>구역을 먼저 나누기</small></span></label>
+                </div>
+                <p class="cut-priority-help">길이 방향을 가로로 놓은 판재 기준입니다.<br>나무결·회전 설정은 두 방식에 동일하게 적용됩니다.</p>
+                <p id="cutPriorityPending" class="cut-priority-help" role="status" hidden>방식이 변경되었습니다. 아래 버튼으로 재계산하세요.</p>
+            </fieldset>
             <!-- Calculate Button -->
             <button class="calculate-btn" id="calculateBtn">
                 최적화 계산
@@ -223,6 +234,7 @@
 
         <!-- Center Panel: Preview -->
         <main class="center-panel" id="centerPanel">
+            <p id="cutPriorityStatus" class="cut-priority-status" role="status" aria-live="polite" hidden></p>
             <!-- Controls -->
             <div class="canvas-controls-top" id="canvasControlsTop" style="display: none;">
                 <button class="btn btn-secondary" id="previewPdfBtn">미리보기</button>
@@ -270,6 +282,7 @@
             <!-- Optimization Results -->
             <section class="section">
                 <h2 class="section-title">최적화 결과</h2>
+                <p id="resultCutPriority" class="cut-priority-result"></p>
                 <div class="result-card">
                     <div class="result-item">
                         <span class="result-label">총 판재수</span>
@@ -310,8 +323,9 @@
     <script src="js/validator.js"></script>
     <script src="js/costCalculator.js"></script>
     <script src="js/labelingEngine.js"></script>
-    <script src="js/settingsManager.js"></script>
+    <script src="js/settingsManager.js?v=20261015-cut-priority-1"></script>
     <script src="js/packer.js?v=20261013-partition-budget-1"></script>
+    <script src="js/verticalStripPacker.js?v=20261015-1"></script>
     <script src="js/renderer.js"></script>
     <script src="js/pdfGenerator.js"></script>
 
@@ -319,7 +333,7 @@
 
     <!-- Main Application Script -->
     <!-- Bump this version when calculation delivery changes; reloads then bypass cached app scripts. -->
-    <script src="js/main-unified.js?v=20261008-residual-1"></script>
+    <script src="js/main-unified.js?v=20261015-cut-priority-1"></script>
     <dialog id="repeatedLayoutDialog" aria-labelledby="repeatedLayoutTitle">
         <div class="rlc-header">
             <div><h2 id="repeatedLayoutTitle">반복 배치 비교 · Test</h2>

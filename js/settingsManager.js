@@ -155,7 +155,14 @@ class SettingsManager {
             elements.trimMargin.value = settings.trimMargin;
             elements.trimMargin.disabled = !settings.enableTrim;
         }
-        if (elements.cutDirection) elements.cutDirection.value = settings.cutDirection;
+        // This UI's default is the existing auto calculation, not the old
+        // internal horizontal algorithm. Historical/missing values stay default.
+        const direction = settings.cutDirection === 'vertical' ? 'vertical' : 'auto';
+        if (elements.cutDirection) elements.cutDirection.value = direction;
+        const horizontalChoice = document.getElementById('priorityHorizontal');
+        const verticalChoice = document.getElementById('priorityVertical');
+        if (horizontalChoice) horizontalChoice.checked = direction === 'auto';
+        if (verticalChoice) verticalChoice.checked = direction === 'vertical';
         if (elements.cutMethod) elements.cutMethod.value = settings.cutMethod;
         if (elements.optimizationPriority) elements.optimizationPriority.value = settings.optimizationPriority;
         if (elements.enableWatermark) elements.enableWatermark.checked = settings.enableWatermark;
